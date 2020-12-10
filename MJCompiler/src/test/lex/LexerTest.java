@@ -12,7 +12,7 @@ public class LexerTest {
     private Scanner lexer4;
 
     @Before
-    public void init() {
+    public void init() throws java.lang.Exception {
         lexer1 = MJCompiler.getNewLexer("bin/testKeywords.mj");
         lexer2 = MJCompiler.getNewLexer("bin/testConstants.mj");
         lexer3 = MJCompiler.getNewLexer("bin/testIdents.mj");

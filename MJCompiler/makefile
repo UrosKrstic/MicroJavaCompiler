@@ -2,16 +2,18 @@
 src_folder=src/
 output_folder=bin/
 src_package=rs/ac/bg/etf/pp1/
+util_package=$(src_package)util/
 test_package=test/
 spec_folder=spec/
 lib_folder=lib/
 
 # build
 output_dir_build = -d $(output_folder)
-classpath_build = -cp ".:$(output_folder):$(lib_folder)cup_v10k.jar"
+classpath_build = -cp ".:$(output_folder):$(lib_folder)cup_v10k.jar:$(lib_folder)log4j-1.2.17.jar"
 mf = program.mj
 mj_source_code_file = $(mf)
 src_list_build = $(wildcard $(src_folder)$(src_package)*.java)
+util_src_list_build = $(wildcard $(src_folder)$(util_package)*.java)
 
 # test global
 test_arg = org.junit.runner.JUnitCore
@@ -35,7 +37,7 @@ run:
 	java $(classpath_build) rs.ac.bg.etf.pp1.MJCompiler $(output_folder)$(mj_source_code_file)
 
 build:
-	javac $(output_dir_build) $(classpath_build) $(src_list_build)
+	javac $(output_dir_build) $(classpath_build) $(src_list_build) $(util_src_list_build)
 
 gen_lex:
 	java -jar $(lib_folder)JFlex.jar -d $(src_folder)$(src_package) $(src_folder)$(spec_folder)mjlexer.flex
