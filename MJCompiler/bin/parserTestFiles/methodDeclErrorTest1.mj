@@ -1,0 +1,7 @@
+program MJProgram
+    {
+        void f {}
+        int f_32() {}
+        boolean f_b(boolean b[], Ja j) {}
+        void f2() int x, y[]; b b; {}
+    }

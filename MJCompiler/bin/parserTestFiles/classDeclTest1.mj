@@ -1,0 +1,9 @@
+program MJProgram
+	class Hi extends Hello {
+        int x;
+    }
+    class Hey {
+        vector v[];
+    }
+    class Smoll {}
+    {}

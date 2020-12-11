@@ -1,0 +1,2 @@
+program MJProgram
+	const int , x = 2;
