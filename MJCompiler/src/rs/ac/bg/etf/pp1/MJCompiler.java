@@ -3,10 +3,8 @@ package rs.ac.bg.etf.pp1;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 
+import rs.ac.bg.etf.pp1.ast.Program;
 import rs.ac.bg.etf.pp1.util.Log4JUtils;
 
 import java_cup.runtime.*;
@@ -21,22 +19,44 @@ public class MJCompiler {
 	}
 
     public static void main(String[] args) {  
+        Logger logger = Logger.getLogger(MJCompiler.class);
         if (args.length < 1) {
-            System.out.println("Error: Missing MJ source code file command-line arg");
+            logger.error("Error: Missing MJ source code file command-line arg");
             return;
         }
-        Logger logger = Logger.getLogger(MJCompiler.class);
         FileReader reader = null;
         try {
             File file = new File(args[0]);
             logger.info("Compiling source file: " + args[0]);
             reader = new FileReader(file);
             Scanner lexer = new Yylex(reader);
-            Symbol token = lexer.next_token();
-            while (token.sym != sym.EOF) {
-                logger.info("[" + token.sym + "] " + token.value.toString());
-                token = lexer.next_token();
+
+            MJParser parser = new MJParser(lexer);
+            Symbol s = parser.parse();
+
+            Program program = null;
+            if (s.value instanceof Program)
+                program = (Program) (s.value);
+            else {
+                logger.error("Syntax Error exiting program");
+                return;
             }
+            logger.info(program.toString(""));
+            logger.info("===================================");
+
+            RuleVisitor rv = new RuleVisitor();
+            program.traverseBottomUp(rv);
+
+            logger.info("Program call count: " + rv.programCallCount);
+            logger.info("ConstDeclList call count: " + rv.constDeclListCount);
+            logger.info("ConstDecl call count: " + rv.constDeclCallCount);
+            logger.info("FirstConstDecl call count: " + rv.firstConstDeclCallCount);
+
+            // Symbol token = lexer.next_token();
+            // while (token.sym != sym.EOF) {
+            //     logger.info("[" + token.sym + "] " + token.value.toString());
+            //     token = lexer.next_token();
+            // }
         }
         catch (Exception e) {
             logger.error(e.getMessage(), e);

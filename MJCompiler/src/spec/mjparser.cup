@@ -1,0 +1,170 @@
+package rs.ac.bg.etf.pp1;
+import java_cup.runtime.*;
+import org.apache.log4j.*;
+import rs.ac.bg.etf.pp1.ast.*;
+
+parser code {:
+    Logger log = Logger.getLogger(getClass());
+   
+    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+     
+    public void report_fatal_error(String message, Object info) throws java.lang.Exception {
+      done_parsing();
+      report_error(message, info);
+    }
+  
+    public void syntax_error(Symbol cur_token) {
+        report_error("\nSintaksna greska", cur_token);
+    }
+  
+    public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
+        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+    }
+
+    public void report_error(String message, Object info) {
+    	StringBuilder msg = new StringBuilder(message); 
+    	if (info instanceof Symbol)
+            msg.append (" na liniji ").append(((Symbol)info).left);
+        log.error(msg.toString());
+    }
+:}
+
+scan with {:
+    Symbol s = this.getScanner().next_token();
+	if (s != null && s.value != null) 
+		log.info(s.toString() + " " + s.value.toString());
+	return s;
+:}
+
+terminal PROGRAM, CONST, ASSIGN, SEMICOLON, COMMA,
+    CLASS, EXTENDS, LEFT_CURLY_BRACE, RIGHT_CURLY_BRACE,
+    LEFT_SQUARE_BRACKET, RIGHT_SQUARE_BRACKET,
+    LEFT_PARENTHESIS, RIGHT_PARENTHESIS, VOID, BREAK,
+    CONTINUE, EQUALS, NOT_EQUALS, GREATER_THAN_OR_EQUAL_TO, 
+    GREATER_THAN, LESSER_THAN_OR_EQUAL_TO, LESSER_THAN,
+    ADD, SUB, MUL, DIV, MOD, LOGICAL_AND, LOGICAL_OR, RETURN, NEW,
+    DOT;
+
+terminal String IDENT;
+terminal String CHARCONST;
+terminal Boolean BOOLCONST;
+terminal Integer NUMCONST;
+
+nonterminal Program, DeclList, ConstDecls, VarDecls,
+    ConstDecl, VarDecl, OptionalVarDeclList, ClassDecl, OptionalArrayBrackets,
+    ConstName, OptionalExtendedClass, Type, MethodDeclListWithBraces, MethodDeclList,
+    MethodDecl, VoidOrType, OptionalFormPars, FormsPars, StatementList, Statement,
+    Term, OptionalMinus, OptionalExpr, Expr, Assignop, Addop, Mulop, Relop, Factor,
+    Designator, OptionalExprInBrackets, ExprInBrackets,
+    OptionalActPars, OptionalActParsWithBrackets, ActPars;
+
+Program ::= (Program) PROGRAM IDENT DeclList
+    LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE;
+
+DeclList ::= (ConstDeclList) DeclList ConstDecls
+    | (VarDeclLists) DeclList VarDecls
+    | (ClassDeclList) DeclList ClassDecl
+    | (NoDeclList);
+
+ConstDecls ::= (ConstDecls) ConstDecl SEMICOLON;
+
+ConstDecl ::= (InnerConstDecl) ConstDecl COMMA IDENT ASSIGN ConstName
+    | (FirstConstDecl) CONST Type IDENT ASSIGN ConstName;
+
+ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClass LEFT_CURLY_BRACE OptionalVarDeclList
+    MethodDeclListWithBraces RIGHT_CURLY_BRACE;
+
+MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE
+    | (NoMethodDeclListWithBraces);
+
+MethodDeclList ::= (MethodDecls) MethodDeclList MethodDecl
+    | (NoMethodDeclList);
+
+MethodDecl ::= (MethodDecl) VoidOrType IDENT LEFT_PARENTHESIS OptionalFormPars RIGHT_PARENTHESIS 
+    OptionalVarDeclList LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE;
+
+VoidOrType ::= (VoidReturnType) VOID
+    | (ReturnType) Type;
+
+OptionalFormPars ::= (FullFormPars) FormsPars
+    | (NoFormParams);
+
+FormsPars ::= (InnerFormParam) FormsPars COMMA Type IDENT OptionalArrayBrackets
+    | (FirstFormParam) Type IDENT OptionalArrayBrackets;
+
+StatementList ::= (MethodStatement) StatementList Statement
+    | (NoStatement);
+
+Statement ::= (BreakStatement) BREAK SEMICOLON
+    | (ContinueStatement) CONTINUE SEMICOLON
+    | (NestedStatement) LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE
+    | (ReturnStatement) RETURN OptionalExpr SEMICOLON
+    ;
+
+OptionalExpr ::= (FullExpr) Expr
+    | (NoExpr);
+
+Expr ::= (InnerExpr) Expr Addop Term
+    | (FirstExpr) OptionalMinus Term;
+
+Term ::= (InnerTerm) Term Mulop Factor
+    | (FirstTerm) Factor;
+
+Factor ::= (DesignatorFactor) Designator OptionalActParsWithBrackets
+    | (ConstFactor) ConstName
+    | (NewOperatorFactor) NEW Type OptionalExprInBrackets
+    | (ExprFactor) LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
+    ;
+
+OptionalExprInBrackets ::= (FullExprInBrackets) LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
+    | (NoExprInBrackets);
+
+OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS ActPars
+    RIGHT_PARENTHESIS
+    | (NoActParsWithBrackets);
+
+/*OptionalActPars ::= (FullActPars) ActPars
+    | (NoActPars);*/
+
+ActPars ::= (InnerActPar) ActPars COMMA Expr
+    | (FirstActPar) Expr;
+
+Designator ::= (InnerDotIdentDesignator) Designator DOT IDENT
+    | (InnerExprInBracketsDesignator) Designator LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
+    | (FirstDesignator) IDENT;
+
+OptionalMinus ::= (Minus) SUB | (NoMinus);
+
+OptionalVarDeclList ::= (FullVarDecl) OptionalVarDeclList VarDecls
+    | (NoVarDecls);
+
+VarDecls ::= (VarDecls) VarDecl SEMICOLON;
+
+VarDecl ::= (InnerVarDecl) VarDecl COMMA IDENT OptionalArrayBrackets
+    | (FirstVarDecl) Type IDENT OptionalArrayBrackets;
+
+ConstName ::= (NumberConst) NUMCONST | (CharConst) CHARCONST | (BooleanConst) BOOLCONST;
+
+OptionalExtendedClass ::= (ExtendedClass) EXTENDS Type
+    | (NoExtendedClass);
+
+OptionalArrayBrackets ::= (ArrayBrackets) LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACKET
+    | (NoArrayBrackets);
+
+Type ::= (Type) IDENT;
+
+/*Assignop ::= (Assignop) ASSIGN;
+
+Relop ::= (EqualsRelop) EQUALS
+    | (NotEqualsRelop) NOT_EQUALS
+    | (GreaterEqualsRelop) GREATER_THAN_OR_EQUAL_TO
+    | (GreaterRelop) GREATER_THAN
+    | (LesserEqualsRelop) LESSER_THAN_OR_EQUAL_TO
+    | (LesserRelop) LESSER_THAN;*/
+
+Addop ::= (AddAddop) ADD
+    | (SubAddop) SUB;
+
+Mulop ::= (MulMulop) MUL
+    | (DivMulop) DIV
+    | (ModMulop) MOD;
