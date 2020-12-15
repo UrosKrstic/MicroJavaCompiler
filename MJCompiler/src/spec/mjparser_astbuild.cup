@@ -1,0 +1,255 @@
+package rs.ac.bg.etf.pp1;
+import java_cup.runtime.*;
+import org.apache.log4j.*;
+import rs.ac.bg.etf.pp1.ast.*;
+
+parser code {:
+    Logger log = Logger.getLogger(getClass());
+   
+    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+     
+    public void report_fatal_error(String message, Object info) throws java.lang.Exception {
+      done_parsing();
+      report_error(message, info);
+    }
+  
+    public void syntax_error(Symbol cur_token) {
+        report_error("\nSintaksna greska", cur_token);
+    }
+  
+    public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
+        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+    }
+
+    public void report_error(String message, Object info) {
+    	StringBuilder msg = new StringBuilder(message); 
+    	if (info instanceof Symbol)
+            msg.append (" na liniji ").append(((Symbol)info).left);
+        log.error(msg.toString());
+    }
+:}
+
+scan with {:
+    Symbol s = this.getScanner().next_token();
+	if (s != null && s.value != null) 
+		log.info(s.toString() + " " + s.value.toString());
+	return s;
+:}
+
+terminal PROGRAM, CONST, ASSIGN, SEMICOLON, COMMA,
+    CLASS, EXTENDS, LEFT_CURLY_BRACE, RIGHT_CURLY_BRACE,
+    LEFT_SQUARE_BRACKET, RIGHT_SQUARE_BRACKET,
+    LEFT_PARENTHESIS, RIGHT_PARENTHESIS, VOID, BREAK,
+    CONTINUE, EQUALS, NOT_EQUALS, GREATER_THAN_OR_EQUAL_TO, 
+    GREATER_THAN, LESSER_THAN_OR_EQUAL_TO, LESSER_THAN,
+    ADD, SUB, MUL, DIV, MOD, LOGICAL_AND, LOGICAL_OR, RETURN, NEW,
+    DOT, QUESTION_MARK, COLON, READ, PRINT, DO, WHILE, IF, ELSE,
+    SWITCH, CASE, POSTINC, POSTDEC, ENUM;
+
+terminal String IDENT;
+terminal String CHARCONST;
+terminal Boolean BOOLCONST;
+terminal Integer NUMCONST;
+
+nonterminal Program Program;
+nonterminal DeclList DeclList;
+nonterminal ConstDecls ConstDecls;
+nonterminal VarDecls VarDecls;
+nonterminal
+    ConstDecl ConstDecl;
+nonterminal VarDecl VarDecl;
+nonterminal OptionalVarDeclList OptionalVarDeclList;
+nonterminal ClassDecl ClassDecl;
+nonterminal OptionalArrayBrackets OptionalArrayBrackets;
+nonterminal
+    ConstName ConstName;
+nonterminal OptionalExtendedClass OptionalExtendedClass;
+nonterminal Type Type;
+nonterminal MethodDeclListWithBraces MethodDeclListWithBraces;
+nonterminal MethodDeclList MethodDeclList;
+nonterminal
+    MethodDecl MethodDecl;
+nonterminal VoidOrType VoidOrType;
+nonterminal OptionalFormPars OptionalFormPars;
+nonterminal FormsPars FormsPars;
+nonterminal StatementList StatementList;
+nonterminal Statement Statement;
+nonterminal
+    Term Term;
+nonterminal OptionalMinus OptionalMinus;
+nonterminal OptionalExpr OptionalExpr;
+nonterminal Expr Expr;
+nonterminal Assignop Assignop;
+nonterminal Addop Addop;
+nonterminal Mulop Mulop;
+nonterminal Relop Relop;
+nonterminal Factor Factor;
+nonterminal
+    Designator Designator;
+nonterminal OptionalExprInBrackets OptionalExprInBrackets;
+nonterminal
+    OptionalActPars OptionalActPars;
+nonterminal OptionalActParsWithBrackets OptionalActParsWithBrackets;
+nonterminal ActPars ActPars;
+nonterminal
+    Condition Condition;
+nonterminal CondTerm CondTerm;
+nonterminal CondFact CondFact;
+nonterminal TermExpr TermExpr;
+nonterminal FullPrintStatement FullPrintStatement;
+nonterminal
+    DesignatorStatementOptions DesignatorStatementOptions;
+nonterminal OptionalElseStatement OptionalElseStatement;
+nonterminal CaseList CaseList;
+nonterminal ConditionExpr ConditionExpr;
+
+precedence  left  ELSE;
+
+Program ::= (Program) PROGRAM IDENT:I1 DeclList:D2
+    LEFT_CURLY_BRACE MethodDeclList:M3 RIGHT_CURLY_BRACE {: RESULT=new Program(I1, D2, M3); RESULT.setLine(I1left); :};
+
+DeclList ::= (ConstDeclList) DeclList:D1 ConstDecls:C2 {: RESULT=new ConstDeclList(D1, C2); RESULT.setLine(D1left); :}
+    | (VarDeclLists) DeclList:D1 VarDecls:V2 {: RESULT=new VarDeclLists(D1, V2); RESULT.setLine(D1left); :}
+    | (ClassDeclList) DeclList:D1 ClassDecl:C2 {: RESULT=new ClassDeclList(D1, C2); RESULT.setLine(D1left); :}
+    | (NoDeclList) {: RESULT=new NoDeclList(); :};
+
+ConstDecls ::= (ConstDecls) ConstDecl:C1 SEMICOLON {: RESULT=new ConstDecls(C1); RESULT.setLine(C1left); :};
+
+ConstDecl ::= (NextConstDecl) ConstDecl:C1 COMMA IDENT:I2 ASSIGN ConstName:C3 {: RESULT=new NextConstDecl(C1, I2, C3); RESULT.setLine(C1left); :}
+    | error SEMICOLON:l {: parser.report_error("Izvrsen oporavak do ; u liniji " + lleft, null); :} {: RESULT=new ConstDeclDerived1(); :}
+    | (SingleConstDecl) CONST Type:T1 IDENT:I2 ASSIGN ConstName:C3 {: RESULT=new SingleConstDecl(T1, I2, C3); RESULT.setLine(T1left); :};
+
+ClassDecl ::= (ClassDecl) CLASS IDENT:I1 OptionalExtendedClass:O2 LEFT_CURLY_BRACE OptionalVarDeclList:O3
+    MethodDeclListWithBraces:M4 RIGHT_CURLY_BRACE {: RESULT=new ClassDecl(I1, O2, O3, M4); RESULT.setLine(I1left); :};
+
+MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE MethodDeclList:M1 RIGHT_CURLY_BRACE {: RESULT=new FullMethodDeclListWithBraces(M1); RESULT.setLine(M1left); :}
+    | (NoMethodDeclListWithBraces) {: RESULT=new NoMethodDeclListWithBraces(); :};
+
+MethodDeclList ::= (MethodDecls) MethodDeclList:M1 MethodDecl:M2 {: RESULT=new MethodDecls(M1, M2); RESULT.setLine(M1left); :}
+    | (NoMethodDeclList) {: RESULT=new NoMethodDeclList(); :};
+
+MethodDecl ::= (MethodDecl) VoidOrType:V1 IDENT:I2 LEFT_PARENTHESIS OptionalFormPars:O3 RIGHT_PARENTHESIS 
+    OptionalVarDeclList:O4 LEFT_CURLY_BRACE StatementList:S5 RIGHT_CURLY_BRACE {: RESULT=new MethodDecl(V1, I2, O3, O4, S5); RESULT.setLine(V1left); :};
+
+VoidOrType ::= (VoidReturnType) VOID {: RESULT=new VoidReturnType(); :}
+    | (ReturnType) Type:T1 {: RESULT=new ReturnType(T1); RESULT.setLine(T1left); :};
+
+OptionalFormPars ::= (FullFormPars) FormsPars:F1 {: RESULT=new FullFormPars(F1); RESULT.setLine(F1left); :}
+    | (NoFormParams) {: RESULT=new NoFormParams(); :};
+
+FormsPars ::= (InnerFormParam) FormsPars:F1 COMMA Type:T2 IDENT:I3 OptionalArrayBrackets:O4 {: RESULT=new InnerFormParam(F1, T2, I3, O4); RESULT.setLine(F1left); :}
+    | (SingleFormParam) Type:T1 IDENT:I2 OptionalArrayBrackets:O3 {: RESULT=new SingleFormParam(T1, I2, O3); RESULT.setLine(T1left); :};
+
+StatementList ::= (MethodStatement) StatementList:S1 Statement:S2 {: RESULT=new MethodStatement(S1, S2); RESULT.setLine(S1left); :}
+    | (NoStatement) {: RESULT=new NoStatement(); :};
+
+Statement ::= (DesignatorStatement) Designator:D1 DesignatorStatementOptions:D2 SEMICOLON {: RESULT=new DesignatorStatement(D1, D2); RESULT.setLine(D1left); :}
+    | (IfElseStatement) IF LEFT_PARENTHESIS ConditionExpr:C1 RIGHT_PARENTHESIS Statement:S2 OptionalElseStatement:O3 {: RESULT=new IfElseStatement(C1, S2, O3); RESULT.setLine(C1left); :}
+    | (DoWhileStatement) DO Statement:S1 WHILE LEFT_PARENTHESIS ConditionExpr:C2 RIGHT_PARENTHESIS SEMICOLON {: RESULT=new DoWhileStatement(S1, C2); RESULT.setLine(S1left); :}
+    | (SwitchStatement) SWITCH LEFT_PARENTHESIS Expr:E1 RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList:C2 RIGHT_CURLY_BRACE {: RESULT=new SwitchStatement(E1, C2); RESULT.setLine(E1left); :}
+    | (BreakStatement) BREAK SEMICOLON {: RESULT=new BreakStatement(); :}
+    | (ContinueStatement) CONTINUE SEMICOLON {: RESULT=new ContinueStatement(); :}
+    | (ReturnStatement) RETURN OptionalExpr:O1 SEMICOLON {: RESULT=new ReturnStatement(O1); RESULT.setLine(O1left); :}
+    | (ReadStatement) READ LEFT_PARENTHESIS Designator:D1 RIGHT_PARENTHESIS SEMICOLON {: RESULT=new ReadStatement(D1); RESULT.setLine(D1left); :}
+    | (PrintStatement) FullPrintStatement:F1 SEMICOLON {: RESULT=new PrintStatement(F1); RESULT.setLine(F1left); :}
+    | (NestedStatement) LEFT_CURLY_BRACE StatementList:S1 RIGHT_CURLY_BRACE {: RESULT=new NestedStatement(S1); RESULT.setLine(S1left); :}
+    ;
+
+DesignatorStatementOptions ::= (AssignExpr) Assignop:A1 Expr:E2 {: RESULT=new AssignExpr(A1, E2); RESULT.setLine(A1left); :}
+    | (FunctionCall) LEFT_PARENTHESIS OptionalActPars:O1 RIGHT_PARENTHESIS {: RESULT=new FunctionCall(O1); RESULT.setLine(O1left); :}
+    | (PostIncrement) POSTINC {: RESULT=new PostIncrement(); :}
+    | (PostDecrement) POSTDEC {: RESULT=new PostDecrement(); :};
+
+OptionalElseStatement ::= (ElseStatement) ELSE Statement:S1 {: RESULT=new ElseStatement(S1); RESULT.setLine(S1left); :}
+    | (NoElseStatement) {: RESULT=new NoElseStatement(); :};
+
+CaseList ::= (Case) CaseList:C1 CASE NUMCONST:N2 COLON StatementList:S3 {: RESULT=new Case(C1, N2, S3); RESULT.setLine(C1left); :}
+    | (NoCase) {: RESULT=new NoCase(); :};
+
+FullPrintStatement ::= (SimplePrintStatement) PRINT LEFT_PARENTHESIS Expr:E1 RIGHT_PARENTHESIS {: RESULT=new SimplePrintStatement(E1); RESULT.setLine(E1left); :}
+    | (ParameterizedPrintStatement) PRINT LEFT_PARENTHESIS Expr:E1 COMMA NUMCONST:N2 RIGHT_PARENTHESIS {: RESULT=new ParameterizedPrintStatement(E1, N2); RESULT.setLine(E1left); :};
+
+OptionalExpr ::= (FullExpr) Expr:E1 {: RESULT=new FullExpr(E1); RESULT.setLine(E1left); :}
+    | (NoExpr) {: RESULT=new NoExpr(); :};
+
+ConditionExpr ::= (TernaryConditionExpr) Condition:C1 QUESTION_MARK ConditionExpr:C2 COLON ConditionExpr:C3 {: RESULT=new TernaryConditionExpr(C1, C2, C3); RESULT.setLine(C1left); :}
+    | (RegularConditionExpr) Condition:C1 {: RESULT=new RegularConditionExpr(C1); RESULT.setLine(C1left); :};
+
+/*---------------IMPORTANT---------------*/
+Expr ::= (TernaryExpr) Condition:C1 QUESTION_MARK Expr:E2 COLON Expr:E3 {: RESULT=new TernaryExpr(C1, E2, E3); RESULT.setLine(C1left); :}
+    | (RegularExpr) TermExpr:T1 {: RESULT=new RegularExpr(T1); RESULT.setLine(T1left); :};
+
+Condition ::= (NextCondition) Condition:C1 LOGICAL_OR CondTerm:C2 {: RESULT=new NextCondition(C1, C2); RESULT.setLine(C1left); :}
+    | (SingleCondition) CondTerm:C1 {: RESULT=new SingleCondition(C1); RESULT.setLine(C1left); :};
+
+CondTerm ::= (NextCondTerm) CondTerm:C1 LOGICAL_AND IDENT:I2 {: RESULT=new NextCondTerm(C1, I2); RESULT.setLine(C1left); :}
+    | (SingleCondTerm) CondFact:C1 {: RESULT=new SingleCondTerm(C1); RESULT.setLine(C1left); :};
+
+/*---------------IMPORTANT---------------*/
+CondFact ::= (FullCondFact) TermExpr:T1 Relop:R2 TermExpr:T3 {: RESULT=new FullCondFact(T1, R2, T3); RESULT.setLine(T1left); :}
+    | (SingleCondFact) TermExpr:T1 {: RESULT=new SingleCondFact(T1); RESULT.setLine(T1left); :};
+
+TermExpr ::= (NextTermExpr) TermExpr:T1 Addop:A2 Term:T3 {: RESULT=new NextTermExpr(T1, A2, T3); RESULT.setLine(T1left); :}
+    | (SingleTermExpr) OptionalMinus:O1 Term:T2 {: RESULT=new SingleTermExpr(O1, T2); RESULT.setLine(O1left); :};
+
+Term ::= (NextTerm) Term:T1 Mulop:M2 Factor:F3 {: RESULT=new NextTerm(T1, M2, F3); RESULT.setLine(T1left); :}
+    | (SingleTerm) Factor:F1 {: RESULT=new SingleTerm(F1); RESULT.setLine(F1left); :};
+
+Factor ::= (DesignatorFactor) Designator:D1 OptionalActParsWithBrackets:O2 {: RESULT=new DesignatorFactor(D1, O2); RESULT.setLine(D1left); :}
+    | (ConstFactor) ConstName:C1 {: RESULT=new ConstFactor(C1); RESULT.setLine(C1left); :}
+    | (NewOperatorFactor) NEW Type:T1 OptionalExprInBrackets:O2 {: RESULT=new NewOperatorFactor(T1, O2); RESULT.setLine(T1left); :}
+    | (ExprFactor) LEFT_PARENTHESIS Expr:E1 RIGHT_PARENTHESIS {: RESULT=new ExprFactor(E1); RESULT.setLine(E1left); :}
+    ;
+
+OptionalExprInBrackets ::= (FullExprInBrackets) LEFT_SQUARE_BRACKET Expr:E1 RIGHT_SQUARE_BRACKET {: RESULT=new FullExprInBrackets(E1); RESULT.setLine(E1left); :}
+    | (NoExprInBrackets) {: RESULT=new NoExprInBrackets(); :};
+
+OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS ActPars:A1
+    RIGHT_PARENTHESIS {: RESULT=new FullActParsWihBrackets(A1); RESULT.setLine(A1left); :}
+    | (NoActParsWithBrackets) {: RESULT=new NoActParsWithBrackets(); :};
+
+OptionalActPars ::= (FullActPars) ActPars:A1 {: RESULT=new FullActPars(A1); RESULT.setLine(A1left); :}
+    | (NoActPars) {: RESULT=new NoActPars(); :};
+
+ActPars ::= (NextActPar) ActPars:A1 COMMA Expr:E2 {: RESULT=new NextActPar(A1, E2); RESULT.setLine(A1left); :}
+    | (SingleActPar) Expr:E1 {: RESULT=new SingleActPar(E1); RESULT.setLine(E1left); :};
+
+Designator ::= (InnerDotIdentDesignator) Designator:D1 DOT IDENT:I2 {: RESULT=new InnerDotIdentDesignator(D1, I2); RESULT.setLine(D1left); :}
+    | (InnerExprInBracketsDesignator) Designator:D1 LEFT_SQUARE_BRACKET Expr:E2 RIGHT_SQUARE_BRACKET {: RESULT=new InnerExprInBracketsDesignator(D1, E2); RESULT.setLine(D1left); :}
+    | (SingleDesignator) IDENT:I1 {: RESULT=new SingleDesignator(I1); RESULT.setLine(I1left); :};
+
+OptionalMinus ::= (Minus) SUB {: RESULT=new Minus(); :} | (NoMinus) {: RESULT=new NoMinus(); :};
+
+OptionalVarDeclList ::= (FullVarDecl) OptionalVarDeclList:O1 VarDecls:V2 {: RESULT=new FullVarDecl(O1, V2); RESULT.setLine(O1left); :}
+    | (NoVarDecls) {: RESULT=new NoVarDecls(); :};
+
+VarDecls ::= (VarDecls) VarDecl:V1 SEMICOLON {: RESULT=new VarDecls(V1); RESULT.setLine(V1left); :};
+
+VarDecl ::= (NextVarDecl) VarDecl:V1 COMMA IDENT:I2 OptionalArrayBrackets:O3 {: RESULT=new NextVarDecl(V1, I2, O3); RESULT.setLine(V1left); :}
+    | (SingleDecl) Type:T1 IDENT:I2 OptionalArrayBrackets:O3 {: RESULT=new SingleDecl(T1, I2, O3); RESULT.setLine(T1left); :};
+
+ConstName ::= (NumberConst) NUMCONST:N1 {: RESULT=new NumberConst(N1); RESULT.setLine(N1left); :} | (CharConst) CHARCONST:C1 {: RESULT=new CharConst(C1); RESULT.setLine(C1left); :} | (BooleanConst) BOOLCONST:B1 {: RESULT=new BooleanConst(B1); RESULT.setLine(B1left); :};
+
+OptionalExtendedClass ::= (ExtendedClass) EXTENDS Type:T1 {: RESULT=new ExtendedClass(T1); RESULT.setLine(T1left); :}
+    | (NoExtendedClass) {: RESULT=new NoExtendedClass(); :};
+
+OptionalArrayBrackets ::= (ArrayBrackets) LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACKET {: RESULT=new ArrayBrackets(); :}
+    | (NoArrayBrackets) {: RESULT=new NoArrayBrackets(); :};
+
+Type ::= (Type) IDENT:I1 {: RESULT=new Type(I1); RESULT.setLine(I1left); :};
+
+Assignop ::= (Assignop) ASSIGN {: RESULT=new Assignop(); :};
+
+Relop ::= (EqualsRelop) EQUALS {: RESULT=new EqualsRelop(); :}
+    | (NotEqualsRelop) NOT_EQUALS {: RESULT=new NotEqualsRelop(); :}
+    | (GreaterEqualsRelop) GREATER_THAN_OR_EQUAL_TO {: RESULT=new GreaterEqualsRelop(); :}
+    | (GreaterRelop) GREATER_THAN {: RESULT=new GreaterRelop(); :}
+    | (LesserEqualsRelop) LESSER_THAN_OR_EQUAL_TO {: RESULT=new LesserEqualsRelop(); :}
+    | (LesserRelop) LESSER_THAN {: RESULT=new LesserRelop(); :};
+
+Addop ::= (AddAddop) ADD {: RESULT=new AddAddop(); :}
+    | (SubAddop) SUB {: RESULT=new SubAddop(); :};
+
+Mulop ::= (MulMulop) MUL {: RESULT=new MulMulop(); :}
+    | (DivMulop) DIV {: RESULT=new DivMulop(); :}
+    | (ModMulop) MOD {: RESULT=new ModMulop(); :};

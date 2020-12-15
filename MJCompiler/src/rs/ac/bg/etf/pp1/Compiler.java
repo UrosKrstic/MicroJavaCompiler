@@ -11,7 +11,7 @@ import java_cup.runtime.*;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
-public class MJCompiler {
+public class Compiler {
 
     static {
 		DOMConfigurator.configure(Log4JUtils.instance().findLoggerConfigFile());
@@ -19,7 +19,7 @@ public class MJCompiler {
 	}
 
     public static void main(String[] args) {  
-        Logger logger = Logger.getLogger(MJCompiler.class);
+        Logger logger = Logger.getLogger(Compiler.class);
         if (args.length < 1) {
             logger.error("Error: Missing MJ source code file command-line arg");
             return;
@@ -74,7 +74,7 @@ public class MJCompiler {
     }
 
     public static Scanner getNewLexer(String filename) throws Exception {
-        Logger logger = Logger.getLogger(MJCompiler.class);
+        Logger logger = Logger.getLogger(Compiler.class);
         FileReader reader = null;
         try {
             File file = new File(filename);
