@@ -1,6 +1,6 @@
 // generated with ast extension for cup
 // version 0.8
-// 15/11/2020 15:34:28
+// 16/11/2020 0:27:20
 
 
 package rs.ac.bg.etf.pp1.ast;
@@ -11,20 +11,23 @@ public interface Visitor {
     public void visit(VoidOrType VoidOrType);
     public void visit(Mulop Mulop);
     public void visit(Relop Relop);
+    public void visit(ClassVarDecls ClassVarDecls);
     public void visit(DesignatorStatementOptions DesignatorStatementOptions);
     public void visit(OptionalExprInBrackets OptionalExprInBrackets);
+    public void visit(IfCondExpr IfCondExpr);
     public void visit(StatementList StatementList);
-    public void visit(ConstName ConstName);
     public void visit(Addop Addop);
     public void visit(OptionalArrayBrackets OptionalArrayBrackets);
     public void visit(Factor Factor);
     public void visit(CondTerm CondTerm);
+    public void visit(GlobalVarDecl GlobalVarDecl);
     public void visit(DeclList DeclList);
     public void visit(Designator Designator);
     public void visit(OptionalExpr OptionalExpr);
     public void visit(Term Term);
     public void visit(Condition Condition);
-    public void visit(OptionalExtendedClass OptionalExtendedClass);
+    public void visit(OptionalExtendedClassLBrace OptionalExtendedClassLBrace);
+    public void visit(ConstValue ConstValue);
     public void visit(CaseList CaseList);
     public void visit(TermExpr TermExpr);
     public void visit(ConditionExpr ConditionExpr);
@@ -33,16 +36,20 @@ public interface Visitor {
     public void visit(Expr Expr);
     public void visit(OptionalActPars OptionalActPars);
     public void visit(ActPars ActPars);
+    public void visit(ClassOptionalVarDeclList ClassOptionalVarDeclList);
     public void visit(FormsPars FormsPars);
+    public void visit(AssignStatementRecover AssignStatementRecover);
     public void visit(Statement Statement);
     public void visit(VarDecl VarDecl);
     public void visit(OptionalElseStatement OptionalElseStatement);
     public void visit(ConstDecl ConstDecl);
     public void visit(CondFact CondFact);
+    public void visit(ConstDecls ConstDecls);
     public void visit(MethodDeclListWithBraces MethodDeclListWithBraces);
     public void visit(MethodDeclList MethodDeclList);
     public void visit(OptionalVarDeclList OptionalVarDeclList);
     public void visit(OptionalMinus OptionalMinus);
+    public void visit(GlobalVarDecls GlobalVarDecls);
     public void visit(ModMulop ModMulop);
     public void visit(DivMulop DivMulop);
     public void visit(MulMulop MulMulop);
@@ -59,6 +66,7 @@ public interface Visitor {
     public void visit(NoArrayBrackets NoArrayBrackets);
     public void visit(ArrayBrackets ArrayBrackets);
     public void visit(NoExtendedClass NoExtendedClass);
+    public void visit(ErrorExtendedClass ErrorExtendedClass);
     public void visit(ExtendedClass ExtendedClass);
     public void visit(BooleanConst BooleanConst);
     public void visit(CharConst CharConst);
@@ -107,10 +115,14 @@ public interface Visitor {
     public void visit(Case Case);
     public void visit(NoElseStatement NoElseStatement);
     public void visit(ElseStatement ElseStatement);
+    public void visit(AssignExprError AssignExprError);
+    public void visit(AssignExpr AssignExpr);
     public void visit(PostDecrement PostDecrement);
     public void visit(PostIncrement PostIncrement);
     public void visit(FunctionCall FunctionCall);
-    public void visit(AssignExpr AssignExpr);
+    public void visit(AssignStatementWithErrRecovery AssignStatementWithErrRecovery);
+    public void visit(ErrorIfCondExpr ErrorIfCondExpr);
+    public void visit(RegularIfCondExpr RegularIfCondExpr);
     public void visit(NestedStatement NestedStatement);
     public void visit(PrintStatement PrintStatement);
     public void visit(ReadStatement ReadStatement);
@@ -124,6 +136,7 @@ public interface Visitor {
     public void visit(NoStatement NoStatement);
     public void visit(MethodStatement MethodStatement);
     public void visit(SingleFormParam SingleFormParam);
+    public void visit(ErrorFormsPars ErrorFormsPars);
     public void visit(InnerFormParam InnerFormParam);
     public void visit(NoFormParams NoFormParams);
     public void visit(FullFormPars FullFormPars);
@@ -134,10 +147,21 @@ public interface Visitor {
     public void visit(MethodDecls MethodDecls);
     public void visit(NoMethodDeclListWithBraces NoMethodDeclListWithBraces);
     public void visit(FullMethodDeclListWithBraces FullMethodDeclListWithBraces);
+    public void visit(ErrorClassVarDecls ErrorClassVarDecls);
+    public void visit(RegularClassVarDecls RegularClassVarDecls);
+    public void visit(NoClassVarDecls NoClassVarDecls);
+    public void visit(FullClassVarDecl FullClassVarDecl);
     public void visit(ClassDecl ClassDecl);
+    public void visit(SingleVarDecl SingleVarDecl);
+    public void visit(ErrorGlobalDecl ErrorGlobalDecl);
+    public void visit(NextGlobalVarDecl NextGlobalVarDecl);
+    public void visit(ErrorGlobalVarDecls ErrorGlobalVarDecls);
+    public void visit(FullGlobalVarDecls FullGlobalVarDecls);
     public void visit(SingleConstDecl SingleConstDecl);
+    public void visit(ErrorConstDecl ErrorConstDecl);
     public void visit(NextConstDecl NextConstDecl);
-    public void visit(ConstDecls ConstDecls);
+    public void visit(ErrorConstDeclsSEMICOLON ErrorConstDeclsSEMICOLON);
+    public void visit(FullConstDecl FullConstDecl);
     public void visit(NoDeclList NoDeclList);
     public void visit(ClassDeclList ClassDeclList);
     public void visit(VarDeclLists VarDeclLists);

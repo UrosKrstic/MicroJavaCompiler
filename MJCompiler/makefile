@@ -28,14 +28,17 @@ src_list_test = $(wildcard $(src_folder)$(lex_test_package)*.java)
 output_dir_test_lex = -d $(output_folder)
 classpath_test_lex = -cp ".:$(output_folder):$(lib_folder)cup_v10k.jar:$(lib_folder)junit-4.7.jar"
 
+all: clean_pars gen_parser build
+
 test_lex: $(output_folder)$(lex_test_package)LexerTest.class
 	java $(classpath_test_lex) $(test_arg) test.lex.LexerTest
 
 $(output_folder)$(lex_test_package)LexerTest.class: $(src_list_test)
 	javac $(output_dir_test_lex) $(classpath_test_lex) $(src_list_test)
 
+
 run:
-	java $(classpath_build) rs.ac.bg.etf.pp1.MJCompiler $(output_folder)$(mj_source_code_file)
+	java $(classpath_build) rs.ac.bg.etf.pp1.Compiler $(output_folder)$(mj_source_code_file)
 
 build:
 	javac $(output_dir_build) $(classpath_build) $(src_list_build) $(util_src_list_build) $(ast_src_list_build)
@@ -50,11 +53,11 @@ gen_parser:
 cleanb:
 	rm $(output_folder)$(src_package)*.class
 
-cleanlex:
+clean_lex:
 	rm $(src_folder)$(src_package)Yylex.java
 
-cleanpars:
+clean_pars:
 	rm $(src_folder)$(ast_package)*.java
-	rm $(src_folder)$(src_package)MJParser.java
-	rm $(src_folder)$(src_package)sym.java
-	rm $(src_folder)$(spec_folder)mjparser_astbuild.cup
+
+clean_logs:
+	rm logs/*.log

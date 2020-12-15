@@ -1,25 +1,25 @@
 // generated with ast extension for cup
 // version 0.8
-// 15/11/2020 15:34:27
+// 16/11/2020 0:27:20
 
 
 package rs.ac.bg.etf.pp1.ast;
 
 public class ConstFactor extends Factor {
 
-    private ConstName ConstName;
+    private ConstValue ConstValue;
 
-    public ConstFactor (ConstName ConstName) {
-        this.ConstName=ConstName;
-        if(ConstName!=null) ConstName.setParent(this);
+    public ConstFactor (ConstValue ConstValue) {
+        this.ConstValue=ConstValue;
+        if(ConstValue!=null) ConstValue.setParent(this);
     }
 
-    public ConstName getConstName() {
-        return ConstName;
+    public ConstValue getConstValue() {
+        return ConstValue;
     }
 
-    public void setConstName(ConstName ConstName) {
-        this.ConstName=ConstName;
+    public void setConstValue(ConstValue ConstValue) {
+        this.ConstValue=ConstValue;
     }
 
     public void accept(Visitor visitor) {
@@ -27,16 +27,16 @@ public class ConstFactor extends Factor {
     }
 
     public void childrenAccept(Visitor visitor) {
-        if(ConstName!=null) ConstName.accept(visitor);
+        if(ConstValue!=null) ConstValue.accept(visitor);
     }
 
     public void traverseTopDown(Visitor visitor) {
         accept(visitor);
-        if(ConstName!=null) ConstName.traverseTopDown(visitor);
+        if(ConstValue!=null) ConstValue.traverseTopDown(visitor);
     }
 
     public void traverseBottomUp(Visitor visitor) {
-        if(ConstName!=null) ConstName.traverseBottomUp(visitor);
+        if(ConstValue!=null) ConstValue.traverseBottomUp(visitor);
         accept(visitor);
     }
 
@@ -45,8 +45,8 @@ public class ConstFactor extends Factor {
         buffer.append(tab);
         buffer.append("ConstFactor(\n");
 
-        if(ConstName!=null)
-            buffer.append(ConstName.toString("  "+tab));
+        if(ConstValue!=null)
+            buffer.append(ConstValue.toString("  "+tab));
         else
             buffer.append(tab+"  null");
         buffer.append("\n");

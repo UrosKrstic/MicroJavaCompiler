@@ -1,11 +1,11 @@
 // generated with ast extension for cup
 // version 0.8
-// 15/11/2020 15:34:27
+// 16/11/2020 0:27:20
 
 
 package rs.ac.bg.etf.pp1.ast;
 
-public class BooleanConst extends ConstName {
+public class BooleanConst extends ConstValue {
 
     private Boolean B1;
 

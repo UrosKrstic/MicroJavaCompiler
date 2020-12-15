@@ -1,6 +1,14 @@
-program MJProgram
-	const int x = 3, yaja = 405;
-    const chaAr henlo23_ = '%';
-
-    const bOOlean thisC_antBeTr2ue = false;
-    {}
+program MJP
+	const int x = 3, c  2, b = 3, a = 4;
+    //int a[, b], c;
+    class T extends a+3 {
+        int a = +;
+        {
+            void f(int a, c, int c) {}
+        }
+    }
+    {
+        void f(int a) {
+            if (a || w +-) {}
+        }
+    }

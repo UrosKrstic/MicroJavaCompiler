@@ -1,46 +1,35 @@
 // generated with ast extension for cup
 // version 0.8
-// 15/11/2020 15:34:27
+// 16/11/2020 0:27:20
 
 
 package rs.ac.bg.etf.pp1.ast;
 
 public class SingleConstDecl extends ConstDecl {
 
-    private Type Type;
-    private String I2;
-    private ConstName ConstName;
+    private String I1;
+    private ConstValue ConstValue;
 
-    public SingleConstDecl (Type Type, String I2, ConstName ConstName) {
-        this.Type=Type;
-        if(Type!=null) Type.setParent(this);
-        this.I2=I2;
-        this.ConstName=ConstName;
-        if(ConstName!=null) ConstName.setParent(this);
+    public SingleConstDecl (String I1, ConstValue ConstValue) {
+        this.I1=I1;
+        this.ConstValue=ConstValue;
+        if(ConstValue!=null) ConstValue.setParent(this);
     }
 
-    public Type getType() {
-        return Type;
+    public String getI1() {
+        return I1;
     }
 
-    public void setType(Type Type) {
-        this.Type=Type;
+    public void setI1(String I1) {
+        this.I1=I1;
     }
 
-    public String getI2() {
-        return I2;
+    public ConstValue getConstValue() {
+        return ConstValue;
     }
 
-    public void setI2(String I2) {
-        this.I2=I2;
-    }
-
-    public ConstName getConstName() {
-        return ConstName;
-    }
-
-    public void setConstName(ConstName ConstName) {
-        this.ConstName=ConstName;
+    public void setConstValue(ConstValue ConstValue) {
+        this.ConstValue=ConstValue;
     }
 
     public void accept(Visitor visitor) {
@@ -48,19 +37,16 @@ public class SingleConstDecl extends ConstDecl {
     }
 
     public void childrenAccept(Visitor visitor) {
-        if(Type!=null) Type.accept(visitor);
-        if(ConstName!=null) ConstName.accept(visitor);
+        if(ConstValue!=null) ConstValue.accept(visitor);
     }
 
     public void traverseTopDown(Visitor visitor) {
         accept(visitor);
-        if(Type!=null) Type.traverseTopDown(visitor);
-        if(ConstName!=null) ConstName.traverseTopDown(visitor);
+        if(ConstValue!=null) ConstValue.traverseTopDown(visitor);
     }
 
     public void traverseBottomUp(Visitor visitor) {
-        if(Type!=null) Type.traverseBottomUp(visitor);
-        if(ConstName!=null) ConstName.traverseBottomUp(visitor);
+        if(ConstValue!=null) ConstValue.traverseBottomUp(visitor);
         accept(visitor);
     }
 
@@ -69,17 +55,11 @@ public class SingleConstDecl extends ConstDecl {
         buffer.append(tab);
         buffer.append("SingleConstDecl(\n");
 
-        if(Type!=null)
-            buffer.append(Type.toString("  "+tab));
-        else
-            buffer.append(tab+"  null");
+        buffer.append(" "+tab+I1);
         buffer.append("\n");
 
-        buffer.append(" "+tab+I2);
-        buffer.append("\n");
-
-        if(ConstName!=null)
-            buffer.append(ConstName.toString("  "+tab));
+        if(ConstValue!=null)
+            buffer.append(ConstValue.toString("  "+tab));
         else
             buffer.append(tab+"  null");
         buffer.append("\n");

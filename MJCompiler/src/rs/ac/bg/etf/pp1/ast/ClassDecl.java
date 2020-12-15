@@ -1,6 +1,6 @@
 // generated with ast extension for cup
 // version 0.8
-// 15/11/2020 15:34:27
+// 16/11/2020 0:27:20
 
 
 package rs.ac.bg.etf.pp1.ast;
@@ -10,16 +10,16 @@ public class ClassDecl implements SyntaxNode {
     private SyntaxNode parent;
     private int line;
     private String I1;
-    private OptionalExtendedClass OptionalExtendedClass;
-    private OptionalVarDeclList OptionalVarDeclList;
+    private OptionalExtendedClassLBrace OptionalExtendedClassLBrace;
+    private ClassOptionalVarDeclList ClassOptionalVarDeclList;
     private MethodDeclListWithBraces MethodDeclListWithBraces;
 
-    public ClassDecl (String I1, OptionalExtendedClass OptionalExtendedClass, OptionalVarDeclList OptionalVarDeclList, MethodDeclListWithBraces MethodDeclListWithBraces) {
+    public ClassDecl (String I1, OptionalExtendedClassLBrace OptionalExtendedClassLBrace, ClassOptionalVarDeclList ClassOptionalVarDeclList, MethodDeclListWithBraces MethodDeclListWithBraces) {
         this.I1=I1;
-        this.OptionalExtendedClass=OptionalExtendedClass;
-        if(OptionalExtendedClass!=null) OptionalExtendedClass.setParent(this);
-        this.OptionalVarDeclList=OptionalVarDeclList;
-        if(OptionalVarDeclList!=null) OptionalVarDeclList.setParent(this);
+        this.OptionalExtendedClassLBrace=OptionalExtendedClassLBrace;
+        if(OptionalExtendedClassLBrace!=null) OptionalExtendedClassLBrace.setParent(this);
+        this.ClassOptionalVarDeclList=ClassOptionalVarDeclList;
+        if(ClassOptionalVarDeclList!=null) ClassOptionalVarDeclList.setParent(this);
         this.MethodDeclListWithBraces=MethodDeclListWithBraces;
         if(MethodDeclListWithBraces!=null) MethodDeclListWithBraces.setParent(this);
     }
@@ -32,20 +32,20 @@ public class ClassDecl implements SyntaxNode {
         this.I1=I1;
     }
 
-    public OptionalExtendedClass getOptionalExtendedClass() {
-        return OptionalExtendedClass;
+    public OptionalExtendedClassLBrace getOptionalExtendedClassLBrace() {
+        return OptionalExtendedClassLBrace;
     }
 
-    public void setOptionalExtendedClass(OptionalExtendedClass OptionalExtendedClass) {
-        this.OptionalExtendedClass=OptionalExtendedClass;
+    public void setOptionalExtendedClassLBrace(OptionalExtendedClassLBrace OptionalExtendedClassLBrace) {
+        this.OptionalExtendedClassLBrace=OptionalExtendedClassLBrace;
     }
 
-    public OptionalVarDeclList getOptionalVarDeclList() {
-        return OptionalVarDeclList;
+    public ClassOptionalVarDeclList getClassOptionalVarDeclList() {
+        return ClassOptionalVarDeclList;
     }
 
-    public void setOptionalVarDeclList(OptionalVarDeclList OptionalVarDeclList) {
-        this.OptionalVarDeclList=OptionalVarDeclList;
+    public void setClassOptionalVarDeclList(ClassOptionalVarDeclList ClassOptionalVarDeclList) {
+        this.ClassOptionalVarDeclList=ClassOptionalVarDeclList;
     }
 
     public MethodDeclListWithBraces getMethodDeclListWithBraces() {
@@ -77,21 +77,21 @@ public class ClassDecl implements SyntaxNode {
     }
 
     public void childrenAccept(Visitor visitor) {
-        if(OptionalExtendedClass!=null) OptionalExtendedClass.accept(visitor);
-        if(OptionalVarDeclList!=null) OptionalVarDeclList.accept(visitor);
+        if(OptionalExtendedClassLBrace!=null) OptionalExtendedClassLBrace.accept(visitor);
+        if(ClassOptionalVarDeclList!=null) ClassOptionalVarDeclList.accept(visitor);
         if(MethodDeclListWithBraces!=null) MethodDeclListWithBraces.accept(visitor);
     }
 
     public void traverseTopDown(Visitor visitor) {
         accept(visitor);
-        if(OptionalExtendedClass!=null) OptionalExtendedClass.traverseTopDown(visitor);
-        if(OptionalVarDeclList!=null) OptionalVarDeclList.traverseTopDown(visitor);
+        if(OptionalExtendedClassLBrace!=null) OptionalExtendedClassLBrace.traverseTopDown(visitor);
+        if(ClassOptionalVarDeclList!=null) ClassOptionalVarDeclList.traverseTopDown(visitor);
         if(MethodDeclListWithBraces!=null) MethodDeclListWithBraces.traverseTopDown(visitor);
     }
 
     public void traverseBottomUp(Visitor visitor) {
-        if(OptionalExtendedClass!=null) OptionalExtendedClass.traverseBottomUp(visitor);
-        if(OptionalVarDeclList!=null) OptionalVarDeclList.traverseBottomUp(visitor);
+        if(OptionalExtendedClassLBrace!=null) OptionalExtendedClassLBrace.traverseBottomUp(visitor);
+        if(ClassOptionalVarDeclList!=null) ClassOptionalVarDeclList.traverseBottomUp(visitor);
         if(MethodDeclListWithBraces!=null) MethodDeclListWithBraces.traverseBottomUp(visitor);
         accept(visitor);
     }
@@ -104,14 +104,14 @@ public class ClassDecl implements SyntaxNode {
         buffer.append(" "+tab+I1);
         buffer.append("\n");
 
-        if(OptionalExtendedClass!=null)
-            buffer.append(OptionalExtendedClass.toString("  "+tab));
+        if(OptionalExtendedClassLBrace!=null)
+            buffer.append(OptionalExtendedClassLBrace.toString("  "+tab));
         else
             buffer.append(tab+"  null");
         buffer.append("\n");
 
-        if(OptionalVarDeclList!=null)
-            buffer.append(OptionalVarDeclList.toString("  "+tab));
+        if(ClassOptionalVarDeclList!=null)
+            buffer.append(ClassOptionalVarDeclList.toString("  "+tab));
         else
             buffer.append(tab+"  null");
         buffer.append("\n");

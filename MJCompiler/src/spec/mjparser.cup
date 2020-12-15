@@ -53,13 +53,15 @@ terminal Integer NUMCONST;
 
 nonterminal Program, DeclList, ConstDecls, VarDecls,
     ConstDecl, VarDecl, OptionalVarDeclList, ClassDecl, OptionalArrayBrackets,
-    ConstName, OptionalExtendedClass, Type, MethodDeclListWithBraces, MethodDeclList,
+    ConstValue, OptionalExtendedClassLBrace, Type, MethodDeclListWithBraces, MethodDeclList,
     MethodDecl, VoidOrType, OptionalFormPars, FormsPars, StatementList, Statement,
     Term, OptionalMinus, OptionalExpr, Expr, Assignop, Addop, Mulop, Relop, Factor,
     Designator, OptionalExprInBrackets,
     OptionalActPars, OptionalActParsWithBrackets, ActPars,
     Condition, CondTerm, CondFact, TermExpr, FullPrintStatement,
-    DesignatorStatementOptions, OptionalElseStatement, CaseList, ConditionExpr;
+    DesignatorStatementOptions, OptionalElseStatement, CaseList, ConditionExpr,
+    GlobalVarDecls, GlobalVarDecl, AssignStatementRecover, IfCondExpr,
+    ClassOptionalVarDeclList, ClassVarDecls;
 
 precedence  left  ELSE;
 
@@ -67,17 +69,42 @@ Program ::= (Program) PROGRAM IDENT DeclList
     LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE;
 
 DeclList ::= (ConstDeclList) DeclList ConstDecls
-    | (VarDeclLists) DeclList VarDecls
+    | (VarDeclLists) DeclList GlobalVarDecls
     | (ClassDeclList) DeclList ClassDecl
     | (NoDeclList);
 
-ConstDecls ::= (ConstDecls) ConstDecl SEMICOLON;
+ConstDecls ::= (FullConstDecl) CONST Type ConstDecl SEMICOLON
+    | (ErrorConstDeclsSEMICOLON) CONST error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :}
+    ;
 
-ConstDecl ::= (NextConstDecl) ConstDecl COMMA IDENT ASSIGN ConstName
-    | (SingleConstDecl) CONST Type IDENT ASSIGN ConstName;
+ConstDecl ::= (NextConstDecl) ConstDecl COMMA IDENT ASSIGN ConstValue
+    | (ErrorConstDecl) error:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :}
+    | (SingleConstDecl) IDENT ASSIGN ConstValue;
 
-ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClass LEFT_CURLY_BRACE OptionalVarDeclList
+GlobalVarDecls ::= (FullGlobalVarDecls) Type GlobalVarDecl SEMICOLON
+    | (ErrorGlobalVarDecls) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije globalne promenljive, linija " + lleft, null); :}
+    ;
+
+GlobalVarDecl ::= (NextGlobalVarDecl) GlobalVarDecl COMMA IDENT OptionalArrayBrackets
+    | (ErrorGlobalDecl) error:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije globalne promenljive, linija " + lleft, null); :}
+    | (SingleVarDecl) IDENT OptionalArrayBrackets;
+
+ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClassLBrace ClassOptionalVarDeclList
     MethodDeclListWithBraces RIGHT_CURLY_BRACE;
+
+ClassOptionalVarDeclList ::= (FullClassVarDecl) ClassOptionalVarDeclList ClassVarDecls
+    | (NoClassVarDecls);
+
+ClassVarDecls ::= (RegularClassVarDecls) VarDecl SEMICOLON
+    | (ErrorClassVarDecls) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :}
+    /* | (ErrorClassVarDeclsLBrace) error LEFT_CURLY_BRACE:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :} */
+    ;
 
 MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE
     | (NoMethodDeclListWithBraces);
@@ -85,23 +112,25 @@ MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE Met
 MethodDeclList ::= (MethodDecls) MethodDeclList MethodDecl
     | (NoMethodDeclList);
 
-MethodDecl ::= (MethodDecl) VoidOrType IDENT LEFT_PARENTHESIS OptionalFormPars RIGHT_PARENTHESIS 
+MethodDecl ::= (MethodDecl) VoidOrType IDENT LEFT_PARENTHESIS OptionalFormPars
     OptionalVarDeclList LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE;
 
 VoidOrType ::= (VoidReturnType) VOID
     | (ReturnType) Type;
 
-OptionalFormPars ::= (FullFormPars) FormsPars
-    | (NoFormParams);
+OptionalFormPars ::= (FullFormPars) FormsPars RIGHT_PARENTHESIS
+    | (NoFormParams) RIGHT_PARENTHESIS;
 
 FormsPars ::= (InnerFormParam) FormsPars COMMA Type IDENT OptionalArrayBrackets
+    | (ErrorFormsPars) error:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije formalnih parametara metode, liniji " + lleft, null); :}
     | (SingleFormParam) Type IDENT OptionalArrayBrackets;
 
 StatementList ::= (MethodStatement) StatementList Statement
     | (NoStatement);
 
-Statement ::= (DesignatorStatement) Designator DesignatorStatementOptions SEMICOLON
-    | (IfElseStatement) IF LEFT_PARENTHESIS ConditionExpr RIGHT_PARENTHESIS Statement OptionalElseStatement
+Statement ::= (DesignatorStatement) DesignatorStatementOptions
+    | (IfElseStatement) IF IfCondExpr Statement OptionalElseStatement
     | (DoWhileStatement) DO Statement WHILE LEFT_PARENTHESIS ConditionExpr RIGHT_PARENTHESIS SEMICOLON
     | (SwitchStatement) SWITCH LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList RIGHT_CURLY_BRACE
     | (BreakStatement) BREAK SEMICOLON
@@ -112,10 +141,20 @@ Statement ::= (DesignatorStatement) Designator DesignatorStatementOptions SEMICO
     | (NestedStatement) LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE
     ;
 
-DesignatorStatementOptions ::= (AssignExpr) Assignop Expr
-    | (FunctionCall) LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS
-    | (PostIncrement) POSTINC
-    | (PostDecrement) POSTDEC;
+IfCondExpr ::= (RegularIfCondExpr) LEFT_PARENTHESIS ConditionExpr RIGHT_PARENTHESIS
+    | (ErrorIfCondExpr) error RIGHT_PARENTHESIS:l
+    {: parser.report_error("Izvrsen oporavak od nekorektnog logickog iskaza unutar if-a, liniji " + lleft, null); :}
+    ;
+
+DesignatorStatementOptions ::= (AssignStatementWithErrRecovery) AssignStatementRecover
+    | (FunctionCall) Designator LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS SEMICOLON
+    | (PostIncrement) Designator POSTINC SEMICOLON
+    | (PostDecrement) Designator POSTDEC SEMICOLON;
+
+AssignStatementRecover ::= (AssignExpr) Designator Assignop Expr SEMICOLON
+    | (AssignExprError) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak od nekorektnog iskaza dodele, liniji " + lleft, null); :}
+    ;
 
 OptionalElseStatement ::= (ElseStatement) ELSE Statement
     | (NoElseStatement);
@@ -153,7 +192,7 @@ Term ::= (NextTerm) Term Mulop Factor
     | (SingleTerm) Factor;
 
 Factor ::= (DesignatorFactor) Designator OptionalActParsWithBrackets
-    | (ConstFactor) ConstName
+    | (ConstFactor) ConstValue
     | (NewOperatorFactor) NEW Type OptionalExprInBrackets
     | (ExprFactor) LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
     ;
@@ -185,10 +224,12 @@ VarDecls ::= (VarDecls) VarDecl SEMICOLON;
 VarDecl ::= (NextVarDecl) VarDecl COMMA IDENT OptionalArrayBrackets
     | (SingleDecl) Type IDENT OptionalArrayBrackets;
 
-ConstName ::= (NumberConst) NUMCONST | (CharConst) CHARCONST | (BooleanConst) BOOLCONST;
+ConstValue ::= (NumberConst) NUMCONST | (CharConst) CHARCONST | (BooleanConst) BOOLCONST;
 
-OptionalExtendedClass ::= (ExtendedClass) EXTENDS Type
-    | (NoExtendedClass);
+OptionalExtendedClassLBrace ::= (ExtendedClass) EXTENDS Type LEFT_CURLY_BRACE
+    | (ErrorExtendedClass) error LEFT_CURLY_BRACE:l
+    {: parser.report_error("Izvrsen oporavak nekorektnog prosirenja klase, liniji " + lleft, null); :}
+    | (NoExtendedClass) LEFT_CURLY_BRACE;
 
 OptionalArrayBrackets ::= (ArrayBrackets) LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACKET
     | (NoArrayBrackets);

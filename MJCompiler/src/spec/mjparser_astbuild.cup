@@ -62,8 +62,8 @@ nonterminal OptionalVarDeclList OptionalVarDeclList;
 nonterminal ClassDecl ClassDecl;
 nonterminal OptionalArrayBrackets OptionalArrayBrackets;
 nonterminal
-    ConstName ConstName;
-nonterminal OptionalExtendedClass OptionalExtendedClass;
+    ConstValue ConstValue;
+nonterminal OptionalExtendedClassLBrace OptionalExtendedClassLBrace;
 nonterminal Type Type;
 nonterminal MethodDeclListWithBraces MethodDeclListWithBraces;
 nonterminal MethodDeclList MethodDeclList;
@@ -102,6 +102,14 @@ nonterminal
 nonterminal OptionalElseStatement OptionalElseStatement;
 nonterminal CaseList CaseList;
 nonterminal ConditionExpr ConditionExpr;
+nonterminal
+    GlobalVarDecls GlobalVarDecls;
+nonterminal GlobalVarDecl GlobalVarDecl;
+nonterminal AssignStatementRecover AssignStatementRecover;
+nonterminal IfCondExpr IfCondExpr;
+nonterminal
+    ClassOptionalVarDeclList ClassOptionalVarDeclList;
+nonterminal ClassVarDecls ClassVarDecls;
 
 precedence  left  ELSE;
 
@@ -109,18 +117,42 @@ Program ::= (Program) PROGRAM IDENT:I1 DeclList:D2
     LEFT_CURLY_BRACE MethodDeclList:M3 RIGHT_CURLY_BRACE {: RESULT=new Program(I1, D2, M3); RESULT.setLine(I1left); :};
 
 DeclList ::= (ConstDeclList) DeclList:D1 ConstDecls:C2 {: RESULT=new ConstDeclList(D1, C2); RESULT.setLine(D1left); :}
-    | (VarDeclLists) DeclList:D1 VarDecls:V2 {: RESULT=new VarDeclLists(D1, V2); RESULT.setLine(D1left); :}
+    | (VarDeclLists) DeclList:D1 GlobalVarDecls:G2 {: RESULT=new VarDeclLists(D1, G2); RESULT.setLine(D1left); :}
     | (ClassDeclList) DeclList:D1 ClassDecl:C2 {: RESULT=new ClassDeclList(D1, C2); RESULT.setLine(D1left); :}
     | (NoDeclList) {: RESULT=new NoDeclList(); :};
 
-ConstDecls ::= (ConstDecls) ConstDecl:C1 SEMICOLON {: RESULT=new ConstDecls(C1); RESULT.setLine(C1left); :};
+ConstDecls ::= (FullConstDecl) CONST Type:T1 ConstDecl:C2 SEMICOLON {: RESULT=new FullConstDecl(T1, C2); RESULT.setLine(T1left); :}
+    | (ErrorConstDeclsSEMICOLON) CONST error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :} {: RESULT=new ErrorConstDeclsSEMICOLON(); :}
+    ;
 
-ConstDecl ::= (NextConstDecl) ConstDecl:C1 COMMA IDENT:I2 ASSIGN ConstName:C3 {: RESULT=new NextConstDecl(C1, I2, C3); RESULT.setLine(C1left); :}
-    /*| error SEMICOLON:l {: parser.report_error("Izvrsen oporavak do ; u liniji " + lleft, null); :}*/
-    | (SingleConstDecl) CONST Type:T1 IDENT:I2 ASSIGN ConstName:C3 {: RESULT=new SingleConstDecl(T1, I2, C3); RESULT.setLine(T1left); :};
+ConstDecl ::= (NextConstDecl) ConstDecl:C1 COMMA IDENT:I2 ASSIGN ConstValue:C3 {: RESULT=new NextConstDecl(C1, I2, C3); RESULT.setLine(C1left); :}
+    | (ErrorConstDecl) error:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :} {: RESULT=new ErrorConstDecl(); :}
+    | (SingleConstDecl) IDENT:I1 ASSIGN ConstValue:C2 {: RESULT=new SingleConstDecl(I1, C2); RESULT.setLine(I1left); :};
 
-ClassDecl ::= (ClassDecl) CLASS IDENT:I1 OptionalExtendedClass:O2 LEFT_CURLY_BRACE OptionalVarDeclList:O3
-    MethodDeclListWithBraces:M4 RIGHT_CURLY_BRACE {: RESULT=new ClassDecl(I1, O2, O3, M4); RESULT.setLine(I1left); :};
+GlobalVarDecls ::= (FullGlobalVarDecls) Type:T1 GlobalVarDecl:G2 SEMICOLON {: RESULT=new FullGlobalVarDecls(T1, G2); RESULT.setLine(T1left); :}
+    | (ErrorGlobalVarDecls) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije globalne promenljive, linija " + lleft, null); :} {: RESULT=new ErrorGlobalVarDecls(); :}
+    ;
+
+GlobalVarDecl ::= (NextGlobalVarDecl) GlobalVarDecl:G1 COMMA IDENT:I2 OptionalArrayBrackets:O3 {: RESULT=new NextGlobalVarDecl(G1, I2, O3); RESULT.setLine(G1left); :}
+    | (ErrorGlobalDecl) error:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije globalne promenljive, linija " + lleft, null); :} {: RESULT=new ErrorGlobalDecl(); :}
+    | (SingleVarDecl) IDENT:I1 OptionalArrayBrackets:O2 {: RESULT=new SingleVarDecl(I1, O2); RESULT.setLine(I1left); :};
+
+ClassDecl ::= (ClassDecl) CLASS IDENT:I1 OptionalExtendedClassLBrace:O2 ClassOptionalVarDeclList:C3
+    MethodDeclListWithBraces:M4 RIGHT_CURLY_BRACE {: RESULT=new ClassDecl(I1, O2, C3, M4); RESULT.setLine(I1left); :};
+
+ClassOptionalVarDeclList ::= (FullClassVarDecl) ClassOptionalVarDeclList:C1 ClassVarDecls:C2 {: RESULT=new FullClassVarDecl(C1, C2); RESULT.setLine(C1left); :}
+    | (NoClassVarDecls) {: RESULT=new NoClassVarDecls(); :};
+
+ClassVarDecls ::= (RegularClassVarDecls) VarDecl:V1 SEMICOLON {: RESULT=new RegularClassVarDecls(V1); RESULT.setLine(V1left); :}
+    | (ErrorClassVarDecls) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :} {: RESULT=new ErrorClassVarDecls(); :}
+    /* | (ErrorClassVarDeclsLBrace) error LEFT_CURLY_BRACE:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :} */
+    ;
 
 MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE MethodDeclList:M1 RIGHT_CURLY_BRACE {: RESULT=new FullMethodDeclListWithBraces(M1); RESULT.setLine(M1left); :}
     | (NoMethodDeclListWithBraces) {: RESULT=new NoMethodDeclListWithBraces(); :};
@@ -128,23 +160,27 @@ MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE Met
 MethodDeclList ::= (MethodDecls) MethodDeclList:M1 MethodDecl:M2 {: RESULT=new MethodDecls(M1, M2); RESULT.setLine(M1left); :}
     | (NoMethodDeclList) {: RESULT=new NoMethodDeclList(); :};
 
-MethodDecl ::= (MethodDecl) VoidOrType:V1 IDENT:I2 LEFT_PARENTHESIS OptionalFormPars:O3 RIGHT_PARENTHESIS 
+MethodDecl ::= (MethodDecl) VoidOrType:V1 IDENT:I2 LEFT_PARENTHESIS OptionalFormPars:O3
     OptionalVarDeclList:O4 LEFT_CURLY_BRACE StatementList:S5 RIGHT_CURLY_BRACE {: RESULT=new MethodDecl(V1, I2, O3, O4, S5); RESULT.setLine(V1left); :};
 
 VoidOrType ::= (VoidReturnType) VOID {: RESULT=new VoidReturnType(); :}
     | (ReturnType) Type:T1 {: RESULT=new ReturnType(T1); RESULT.setLine(T1left); :};
 
-OptionalFormPars ::= (FullFormPars) FormsPars:F1 {: RESULT=new FullFormPars(F1); RESULT.setLine(F1left); :}
-    | (NoFormParams) {: RESULT=new NoFormParams(); :};
+OptionalFormPars ::= (FullFormPars) FormsPars:F1 RIGHT_PARENTHESIS {: RESULT=new FullFormPars(F1); RESULT.setLine(F1left); :}
+    /* | (ErrorOptionalFormsPars) error RIGHT_PARENTHESIS:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije formalnog parametra metode, liniji " + lleft, null); :} */
+    | (NoFormParams) RIGHT_PARENTHESIS {: RESULT=new NoFormParams(); :};
 
 FormsPars ::= (InnerFormParam) FormsPars:F1 COMMA Type:T2 IDENT:I3 OptionalArrayBrackets:O4 {: RESULT=new InnerFormParam(F1, T2, I3, O4); RESULT.setLine(F1left); :}
+    | (ErrorFormsPars) error:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije formalnih parametara metode, liniji " + lleft, null); :} {: RESULT=new ErrorFormsPars(); :}
     | (SingleFormParam) Type:T1 IDENT:I2 OptionalArrayBrackets:O3 {: RESULT=new SingleFormParam(T1, I2, O3); RESULT.setLine(T1left); :};
 
 StatementList ::= (MethodStatement) StatementList:S1 Statement:S2 {: RESULT=new MethodStatement(S1, S2); RESULT.setLine(S1left); :}
     | (NoStatement) {: RESULT=new NoStatement(); :};
 
-Statement ::= (DesignatorStatement) Designator:D1 DesignatorStatementOptions:D2 SEMICOLON {: RESULT=new DesignatorStatement(D1, D2); RESULT.setLine(D1left); :}
-    | (IfElseStatement) IF LEFT_PARENTHESIS ConditionExpr:C1 RIGHT_PARENTHESIS Statement:S2 OptionalElseStatement:O3 {: RESULT=new IfElseStatement(C1, S2, O3); RESULT.setLine(C1left); :}
+Statement ::= (DesignatorStatement) DesignatorStatementOptions:D1 {: RESULT=new DesignatorStatement(D1); RESULT.setLine(D1left); :}
+    | (IfElseStatement) IF IfCondExpr:I1 Statement:S2 OptionalElseStatement:O3 {: RESULT=new IfElseStatement(I1, S2, O3); RESULT.setLine(I1left); :}
     | (DoWhileStatement) DO Statement:S1 WHILE LEFT_PARENTHESIS ConditionExpr:C2 RIGHT_PARENTHESIS SEMICOLON {: RESULT=new DoWhileStatement(S1, C2); RESULT.setLine(S1left); :}
     | (SwitchStatement) SWITCH LEFT_PARENTHESIS Expr:E1 RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList:C2 RIGHT_CURLY_BRACE {: RESULT=new SwitchStatement(E1, C2); RESULT.setLine(E1left); :}
     | (BreakStatement) BREAK SEMICOLON {: RESULT=new BreakStatement(); :}
@@ -155,10 +191,20 @@ Statement ::= (DesignatorStatement) Designator:D1 DesignatorStatementOptions:D2 
     | (NestedStatement) LEFT_CURLY_BRACE StatementList:S1 RIGHT_CURLY_BRACE {: RESULT=new NestedStatement(S1); RESULT.setLine(S1left); :}
     ;
 
-DesignatorStatementOptions ::= (AssignExpr) Assignop:A1 Expr:E2 {: RESULT=new AssignExpr(A1, E2); RESULT.setLine(A1left); :}
-    | (FunctionCall) LEFT_PARENTHESIS OptionalActPars:O1 RIGHT_PARENTHESIS {: RESULT=new FunctionCall(O1); RESULT.setLine(O1left); :}
-    | (PostIncrement) POSTINC {: RESULT=new PostIncrement(); :}
-    | (PostDecrement) POSTDEC {: RESULT=new PostDecrement(); :};
+IfCondExpr ::= (RegularIfCondExpr) LEFT_PARENTHESIS ConditionExpr:C1 RIGHT_PARENTHESIS {: RESULT=new RegularIfCondExpr(C1); RESULT.setLine(C1left); :}
+    | (ErrorIfCondExpr) error RIGHT_PARENTHESIS:l
+    {: parser.report_error("Izvrsen oporavak od nekorektnog logickog iskaza unutar if-a, liniji " + lleft, null); :} {: RESULT=new ErrorIfCondExpr(); :}
+    ;
+
+DesignatorStatementOptions ::= (AssignStatementWithErrRecovery) AssignStatementRecover:A1 {: RESULT=new AssignStatementWithErrRecovery(A1); RESULT.setLine(A1left); :}
+    | (FunctionCall) Designator:D1 LEFT_PARENTHESIS OptionalActPars:O2 RIGHT_PARENTHESIS SEMICOLON {: RESULT=new FunctionCall(D1, O2); RESULT.setLine(D1left); :}
+    | (PostIncrement) Designator:D1 POSTINC SEMICOLON {: RESULT=new PostIncrement(D1); RESULT.setLine(D1left); :}
+    | (PostDecrement) Designator:D1 POSTDEC SEMICOLON {: RESULT=new PostDecrement(D1); RESULT.setLine(D1left); :};
+
+AssignStatementRecover ::= (AssignExpr) Designator:D1 Assignop:A2 Expr:E3 SEMICOLON {: RESULT=new AssignExpr(D1, A2, E3); RESULT.setLine(D1left); :}
+    | (AssignExprError) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak od nekorektnog iskaza dodele, liniji " + lleft, null); :} {: RESULT=new AssignExprError(); :}
+    ;
 
 OptionalElseStatement ::= (ElseStatement) ELSE Statement:S1 {: RESULT=new ElseStatement(S1); RESULT.setLine(S1left); :}
     | (NoElseStatement) {: RESULT=new NoElseStatement(); :};
@@ -196,7 +242,7 @@ Term ::= (NextTerm) Term:T1 Mulop:M2 Factor:F3 {: RESULT=new NextTerm(T1, M2, F3
     | (SingleTerm) Factor:F1 {: RESULT=new SingleTerm(F1); RESULT.setLine(F1left); :};
 
 Factor ::= (DesignatorFactor) Designator:D1 OptionalActParsWithBrackets:O2 {: RESULT=new DesignatorFactor(D1, O2); RESULT.setLine(D1left); :}
-    | (ConstFactor) ConstName:C1 {: RESULT=new ConstFactor(C1); RESULT.setLine(C1left); :}
+    | (ConstFactor) ConstValue:C1 {: RESULT=new ConstFactor(C1); RESULT.setLine(C1left); :}
     | (NewOperatorFactor) NEW Type:T1 OptionalExprInBrackets:O2 {: RESULT=new NewOperatorFactor(T1, O2); RESULT.setLine(T1left); :}
     | (ExprFactor) LEFT_PARENTHESIS Expr:E1 RIGHT_PARENTHESIS {: RESULT=new ExprFactor(E1); RESULT.setLine(E1left); :}
     ;
@@ -228,10 +274,12 @@ VarDecls ::= (VarDecls) VarDecl:V1 SEMICOLON {: RESULT=new VarDecls(V1); RESULT.
 VarDecl ::= (NextVarDecl) VarDecl:V1 COMMA IDENT:I2 OptionalArrayBrackets:O3 {: RESULT=new NextVarDecl(V1, I2, O3); RESULT.setLine(V1left); :}
     | (SingleDecl) Type:T1 IDENT:I2 OptionalArrayBrackets:O3 {: RESULT=new SingleDecl(T1, I2, O3); RESULT.setLine(T1left); :};
 
-ConstName ::= (NumberConst) NUMCONST:N1 {: RESULT=new NumberConst(N1); RESULT.setLine(N1left); :} | (CharConst) CHARCONST:C1 {: RESULT=new CharConst(C1); RESULT.setLine(C1left); :} | (BooleanConst) BOOLCONST:B1 {: RESULT=new BooleanConst(B1); RESULT.setLine(B1left); :};
+ConstValue ::= (NumberConst) NUMCONST:N1 {: RESULT=new NumberConst(N1); RESULT.setLine(N1left); :} | (CharConst) CHARCONST:C1 {: RESULT=new CharConst(C1); RESULT.setLine(C1left); :} | (BooleanConst) BOOLCONST:B1 {: RESULT=new BooleanConst(B1); RESULT.setLine(B1left); :};
 
-OptionalExtendedClass ::= (ExtendedClass) EXTENDS Type:T1 {: RESULT=new ExtendedClass(T1); RESULT.setLine(T1left); :}
-    | (NoExtendedClass) {: RESULT=new NoExtendedClass(); :};
+OptionalExtendedClassLBrace ::= (ExtendedClass) EXTENDS Type:T1 LEFT_CURLY_BRACE {: RESULT=new ExtendedClass(T1); RESULT.setLine(T1left); :}
+    | (ErrorExtendedClass) error LEFT_CURLY_BRACE:l
+    {: parser.report_error("Izvrsen oporavak nekorektnog prosirenja klase, liniji " + lleft, null); :} {: RESULT=new ErrorExtendedClass(); :}
+    | (NoExtendedClass) LEFT_CURLY_BRACE {: RESULT=new NoExtendedClass(); :};
 
 OptionalArrayBrackets ::= (ArrayBrackets) LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACKET {: RESULT=new ArrayBrackets(); :}
     | (NoArrayBrackets) {: RESULT=new NoArrayBrackets(); :};
