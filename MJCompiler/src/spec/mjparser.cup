@@ -43,7 +43,8 @@ terminal PROGRAM, CONST, ASSIGN, SEMICOLON, COMMA,
     CONTINUE, EQUALS, NOT_EQUALS, GREATER_THAN_OR_EQUAL_TO, 
     GREATER_THAN, LESSER_THAN_OR_EQUAL_TO, LESSER_THAN,
     ADD, SUB, MUL, DIV, MOD, LOGICAL_AND, LOGICAL_OR, RETURN, NEW,
-    DOT;
+    DOT, QUESTION_MARK, COLON, READ, PRINT, DO, WHILE, IF, ELSE,
+    SWITCH, CASE, POSTINC, POSTDEC, ENUM;
 
 terminal String IDENT;
 terminal String CHARCONST;
@@ -55,8 +56,12 @@ nonterminal Program, DeclList, ConstDecls, VarDecls,
     ConstName, OptionalExtendedClass, Type, MethodDeclListWithBraces, MethodDeclList,
     MethodDecl, VoidOrType, OptionalFormPars, FormsPars, StatementList, Statement,
     Term, OptionalMinus, OptionalExpr, Expr, Assignop, Addop, Mulop, Relop, Factor,
-    Designator, OptionalExprInBrackets, ExprInBrackets,
-    OptionalActPars, OptionalActParsWithBrackets, ActPars;
+    Designator, OptionalExprInBrackets,
+    OptionalActPars, OptionalActParsWithBrackets, ActPars,
+    Condition, CondTerm, CondFact, TermExpr, FullPrintStatement,
+    DesignatorStatementOptions, OptionalElseStatement, CaseList, ConditionExpr;
+
+precedence  left  ELSE;
 
 Program ::= (Program) PROGRAM IDENT DeclList
     LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE;
@@ -68,8 +73,9 @@ DeclList ::= (ConstDeclList) DeclList ConstDecls
 
 ConstDecls ::= (ConstDecls) ConstDecl SEMICOLON;
 
-ConstDecl ::= (InnerConstDecl) ConstDecl COMMA IDENT ASSIGN ConstName
-    | (FirstConstDecl) CONST Type IDENT ASSIGN ConstName;
+ConstDecl ::= (NextConstDecl) ConstDecl COMMA IDENT ASSIGN ConstName
+    | error SEMICOLON:l {: parser.report_error("Izvrsen oporavak do ; u liniji " + lleft, null); :}
+    | (SingleConstDecl) CONST Type IDENT ASSIGN ConstName;
 
 ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClass LEFT_CURLY_BRACE OptionalVarDeclList
     MethodDeclListWithBraces RIGHT_CURLY_BRACE;
@@ -90,25 +96,62 @@ OptionalFormPars ::= (FullFormPars) FormsPars
     | (NoFormParams);
 
 FormsPars ::= (InnerFormParam) FormsPars COMMA Type IDENT OptionalArrayBrackets
-    | (FirstFormParam) Type IDENT OptionalArrayBrackets;
+    | (SingleFormParam) Type IDENT OptionalArrayBrackets;
 
 StatementList ::= (MethodStatement) StatementList Statement
     | (NoStatement);
 
-Statement ::= (BreakStatement) BREAK SEMICOLON
+Statement ::= (DesignatorStatement) Designator DesignatorStatementOptions SEMICOLON
+    | (IfElseStatement) IF LEFT_PARENTHESIS ConditionExpr RIGHT_PARENTHESIS Statement OptionalElseStatement
+    | (DoWhileStatement) DO Statement WHILE LEFT_PARENTHESIS ConditionExpr RIGHT_PARENTHESIS SEMICOLON
+    | (SwitchStatement) SWITCH LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList RIGHT_CURLY_BRACE
+    | (BreakStatement) BREAK SEMICOLON
     | (ContinueStatement) CONTINUE SEMICOLON
-    | (NestedStatement) LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE
     | (ReturnStatement) RETURN OptionalExpr SEMICOLON
+    | (ReadStatement) READ LEFT_PARENTHESIS Designator RIGHT_PARENTHESIS SEMICOLON
+    | (PrintStatement) FullPrintStatement SEMICOLON
+    | (NestedStatement) LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE
     ;
+
+DesignatorStatementOptions ::= (AssignExpr) Assignop Expr
+    | (FunctionCall) LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS
+    | (PostIncrement) POSTINC
+    | (PostDecrement) POSTDEC;
+
+OptionalElseStatement ::= (ElseStatement) ELSE Statement
+    | (NoElseStatement);
+
+CaseList ::= (Case) CaseList CASE NUMCONST COLON StatementList
+    | (NoCase);
+
+FullPrintStatement ::= (SimplePrintStatement) PRINT LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
+    | (ParameterizedPrintStatement) PRINT LEFT_PARENTHESIS Expr COMMA NUMCONST RIGHT_PARENTHESIS;
 
 OptionalExpr ::= (FullExpr) Expr
     | (NoExpr);
 
-Expr ::= (InnerExpr) Expr Addop Term
-    | (FirstExpr) OptionalMinus Term;
+ConditionExpr ::= (TernaryConditionExpr) Condition QUESTION_MARK ConditionExpr COLON ConditionExpr
+    | (RegularConditionExpr) Condition;
 
-Term ::= (InnerTerm) Term Mulop Factor
-    | (FirstTerm) Factor;
+/*---------------IMPORTANT---------------*/
+Expr ::= (TernaryExpr) Condition QUESTION_MARK Expr COLON Expr
+    | (RegularExpr) TermExpr;
+
+Condition ::= (NextCondition) Condition LOGICAL_OR CondTerm
+    | (SingleCondition) CondTerm;
+
+CondTerm ::= (NextCondTerm) CondTerm LOGICAL_AND IDENT
+    | (SingleCondTerm) CondFact;
+
+/*---------------IMPORTANT---------------*/
+CondFact ::= (FullCondFact) TermExpr Relop TermExpr
+    | (SingleCondFact) TermExpr;
+
+TermExpr ::= (NextTermExpr) TermExpr Addop Term
+    | (SingleTermExpr) OptionalMinus Term;
+
+Term ::= (NextTerm) Term Mulop Factor
+    | (SingleTerm) Factor;
 
 Factor ::= (DesignatorFactor) Designator OptionalActParsWithBrackets
     | (ConstFactor) ConstName
@@ -123,15 +166,15 @@ OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS ActPar
     RIGHT_PARENTHESIS
     | (NoActParsWithBrackets);
 
-/*OptionalActPars ::= (FullActPars) ActPars
-    | (NoActPars);*/
+OptionalActPars ::= (FullActPars) ActPars
+    | (NoActPars);
 
-ActPars ::= (InnerActPar) ActPars COMMA Expr
-    | (FirstActPar) Expr;
+ActPars ::= (NextActPar) ActPars COMMA Expr
+    | (SingleActPar) Expr;
 
 Designator ::= (InnerDotIdentDesignator) Designator DOT IDENT
     | (InnerExprInBracketsDesignator) Designator LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
-    | (FirstDesignator) IDENT;
+    | (SingleDesignator) IDENT;
 
 OptionalMinus ::= (Minus) SUB | (NoMinus);
 
@@ -140,8 +183,8 @@ OptionalVarDeclList ::= (FullVarDecl) OptionalVarDeclList VarDecls
 
 VarDecls ::= (VarDecls) VarDecl SEMICOLON;
 
-VarDecl ::= (InnerVarDecl) VarDecl COMMA IDENT OptionalArrayBrackets
-    | (FirstVarDecl) Type IDENT OptionalArrayBrackets;
+VarDecl ::= (NextVarDecl) VarDecl COMMA IDENT OptionalArrayBrackets
+    | (SingleDecl) Type IDENT OptionalArrayBrackets;
 
 ConstName ::= (NumberConst) NUMCONST | (CharConst) CHARCONST | (BooleanConst) BOOLCONST;
 
@@ -153,14 +196,14 @@ OptionalArrayBrackets ::= (ArrayBrackets) LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACK
 
 Type ::= (Type) IDENT;
 
-/*Assignop ::= (Assignop) ASSIGN;
+Assignop ::= (Assignop) ASSIGN;
 
 Relop ::= (EqualsRelop) EQUALS
     | (NotEqualsRelop) NOT_EQUALS
     | (GreaterEqualsRelop) GREATER_THAN_OR_EQUAL_TO
     | (GreaterRelop) GREATER_THAN
     | (LesserEqualsRelop) LESSER_THAN_OR_EQUAL_TO
-    | (LesserRelop) LESSER_THAN;*/
+    | (LesserRelop) LESSER_THAN;
 
 Addop ::= (AddAddop) ADD
     | (SubAddop) SUB;
