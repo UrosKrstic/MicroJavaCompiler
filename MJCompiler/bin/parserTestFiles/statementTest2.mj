@@ -1,0 +1,9 @@
+program MJProgram
+    const int flag = true;
+    {
+        void f() {
+            if (flag) {
+                print("Hello, World!");
+            }
+        }
+    }

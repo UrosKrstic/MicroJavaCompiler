@@ -1,5 +1,5 @@
 program MJProgram
-    const boolean flag true;
+    const boolean flag = true;
     {
         void f() int num, a, b[]; {
             if (a > b) 
@@ -11,14 +11,5 @@ program MJProgram
             if (a > b) return;
             if (flag) return;
             else read(a);
-            switch (a) {
-                case 1: b[1] = a;
-                case 2:
-                case 3: {
-                    print("Vau");
-                }
-            }
-            continue;
-            a = b + 3 > 6 ? true : false;
         }
     }

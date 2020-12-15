@@ -1,0 +1,6 @@
+program MJProgram
+    {
+        void f() {
+            x = a + 3 > 2 ? 1 : 2 > b - 1 ? i : l;
+        }
+    }

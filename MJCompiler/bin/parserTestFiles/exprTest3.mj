@@ -1,0 +1,8 @@
+program MJProgram
+    {
+        void f() {
+            return -x + a;
+            return a + x.b[-a+2].s[4][(-new D * d) + foo(x,2 + z) *"lol"] * y / z - a;
+            return;
+        }
+    }
