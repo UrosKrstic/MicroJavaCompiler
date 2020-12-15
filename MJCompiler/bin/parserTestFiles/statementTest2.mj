@@ -3,7 +3,7 @@ program MJProgram
     {
         void f() {
             if (flag) {
-                print("Hello, World!");
+                print('2');
             }
         }
     }

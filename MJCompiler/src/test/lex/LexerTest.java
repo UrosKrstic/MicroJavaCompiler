@@ -3,7 +3,7 @@ package test.lex;
 import org.junit.*;
 import java_cup.runtime.*;
 import rs.ac.bg.etf.pp1.sym;
-import rs.ac.bg.etf.pp1.MJCompiler;
+import rs.ac.bg.etf.pp1.Compiler;
 
 public class LexerTest {
     private Scanner lexer1;
@@ -13,10 +13,10 @@ public class LexerTest {
 
     @Before
     public void init() throws java.lang.Exception {
-        lexer1 = MJCompiler.getNewLexer("bin/testKeywords.mj");
-        lexer2 = MJCompiler.getNewLexer("bin/testConstants.mj");
-        lexer3 = MJCompiler.getNewLexer("bin/testIdents.mj");
-        lexer4 = MJCompiler.getNewLexer("bin/testOperators.mj");
+        lexer1 = Compiler.getNewLexer("bin/testKeywords.mj");
+        lexer2 = Compiler.getNewLexer("bin/testConstants.mj");
+        lexer3 = Compiler.getNewLexer("bin/testIdents.mj");
+        lexer4 = Compiler.getNewLexer("bin/testOperators.mj");
     }
 
     @Test

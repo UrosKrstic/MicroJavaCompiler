@@ -47,7 +47,7 @@ terminal PROGRAM, CONST, ASSIGN, SEMICOLON, COMMA,
     SWITCH, CASE, POSTINC, POSTDEC, ENUM;
 
 terminal String IDENT;
-terminal String CHARCONST;
+terminal Character CHARCONST;
 terminal Boolean BOOLCONST;
 terminal Integer NUMCONST;
 
@@ -116,7 +116,7 @@ DeclList ::= (ConstDeclList) DeclList:D1 ConstDecls:C2 {: RESULT=new ConstDeclLi
 ConstDecls ::= (ConstDecls) ConstDecl:C1 SEMICOLON {: RESULT=new ConstDecls(C1); RESULT.setLine(C1left); :};
 
 ConstDecl ::= (NextConstDecl) ConstDecl:C1 COMMA IDENT:I2 ASSIGN ConstName:C3 {: RESULT=new NextConstDecl(C1, I2, C3); RESULT.setLine(C1left); :}
-    | error SEMICOLON:l {: parser.report_error("Izvrsen oporavak do ; u liniji " + lleft, null); :} {: RESULT=new ConstDeclDerived1(); :}
+    /*| error SEMICOLON:l {: parser.report_error("Izvrsen oporavak do ; u liniji " + lleft, null); :}*/
     | (SingleConstDecl) CONST Type:T1 IDENT:I2 ASSIGN ConstName:C3 {: RESULT=new SingleConstDecl(T1, I2, C3); RESULT.setLine(T1left); :};
 
 ClassDecl ::= (ClassDecl) CLASS IDENT:I1 OptionalExtendedClass:O2 LEFT_CURLY_BRACE OptionalVarDeclList:O3

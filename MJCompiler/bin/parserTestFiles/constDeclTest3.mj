@@ -1,6 +1,6 @@
 program MJProgram
 	const int x = 3, yaja = 405;
-    const chaAr henlo23_ = "ejwhatlol";
+    const chaAr henlo23_ = '%';
 
     const bOOlean thisC_antBeTr2ue = false;
     {}

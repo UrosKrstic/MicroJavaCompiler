@@ -47,7 +47,7 @@ terminal PROGRAM, CONST, ASSIGN, SEMICOLON, COMMA,
     SWITCH, CASE, POSTINC, POSTDEC, ENUM;
 
 terminal String IDENT;
-terminal String CHARCONST;
+terminal Character CHARCONST;
 terminal Boolean BOOLCONST;
 terminal Integer NUMCONST;
 
@@ -74,7 +74,6 @@ DeclList ::= (ConstDeclList) DeclList ConstDecls
 ConstDecls ::= (ConstDecls) ConstDecl SEMICOLON;
 
 ConstDecl ::= (NextConstDecl) ConstDecl COMMA IDENT ASSIGN ConstName
-    | error SEMICOLON:l {: parser.report_error("Izvrsen oporavak do ; u liniji " + lleft, null); :}
     | (SingleConstDecl) CONST Type IDENT ASSIGN ConstName;
 
 ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClass LEFT_CURLY_BRACE OptionalVarDeclList
