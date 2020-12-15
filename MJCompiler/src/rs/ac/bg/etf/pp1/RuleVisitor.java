@@ -18,8 +18,4 @@ public class RuleVisitor extends VisitorAdaptor {
     public void visit(ConstDecl ConstDecl) {
         constDeclCallCount++;
     }
-
-    public void visit(FirstConstDecl FirstConstDecl) {
-        firstConstDeclCallCount++;
-    }
 }
