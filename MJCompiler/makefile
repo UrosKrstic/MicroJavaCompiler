@@ -59,5 +59,17 @@ clean_lex:
 clean_pars:
 	rm $(src_folder)$(ast_package)*.java
 
+antdel:
+	ant delete
+
+antcl:
+	ant clean_build
+
+antbuild:
+	ant compile
+
+antrun:
+	ant run -Darg0=$(mj_source_code_file)
+
 clean_logs:
 	rm logs/*.log
