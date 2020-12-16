@@ -23,4 +23,10 @@ hs_err_pid*
 
 MJCompiler/src/rs/ac/bg/etf/pp1/Yylex.java~
 
-MJCompiler/src/rs/ac/bg/etf/pp1/ast/
+MJCompiler/src/rs/ac/bg/etf/pp1/ast
+
+MJCompiler/src/spec/mjparser_astbuild.cup
+
+MJCompiler/src/rs/ac/bg/etf/pp1/sym.java
+
+MJCompiler/src/rs/ac/bg/etf/pp1/MJParser.java
