@@ -178,7 +178,7 @@ Expr ::= (TernaryExpr) Condition QUESTION_MARK Expr COLON Expr
 Condition ::= (NextCondition) Condition LOGICAL_OR CondTerm
     | (SingleCondition) CondTerm;
 
-CondTerm ::= (NextCondTerm) CondTerm LOGICAL_AND IDENT
+CondTerm ::= (NextCondTerm) CondTerm LOGICAL_AND CondFact
     | (SingleCondTerm) CondFact;
 
 /*---------------IMPORTANT---------------*/
@@ -200,8 +200,7 @@ Factor ::= (DesignatorFactor) Designator OptionalActParsWithBrackets
 OptionalExprInBrackets ::= (FullExprInBrackets) LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
     | (NoExprInBrackets);
 
-OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS ActPars
-    RIGHT_PARENTHESIS
+OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS
     | (NoActParsWithBrackets);
 
 OptionalActPars ::= (FullActPars) ActPars
