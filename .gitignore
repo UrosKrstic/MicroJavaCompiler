@@ -30,3 +30,5 @@ MJCompiler/src/spec/mjparser_astbuild.cup
 MJCompiler/src/rs/ac/bg/etf/pp1/sym.java
 
 MJCompiler/src/rs/ac/bg/etf/pp1/MJParser.java
+
+MJCompiler/bin/program.mj
