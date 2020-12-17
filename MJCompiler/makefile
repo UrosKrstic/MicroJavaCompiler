@@ -12,7 +12,7 @@ ast_class_path = src.rs.ac.bg.etf.pp1.ast
 
 # build
 output_dir_build = -d $(output_folder)
-classpath_build = -cp ".:$(output_folder):$(lib_folder)cup_v10k.jar:$(lib_folder)log4j-1.2.17.jar:$(lib_folder)JFlex.jar"
+classpath_build = -cp ".:$(output_folder):$(lib_folder)cup_v10k.jar:$(lib_folder)log4j-1.2.17.jar:$(lib_folder)JFlex.jar:$(lib_folder)symboltable-1-1.jar"
 mf = program.mj
 mj_source_code_file = $(mf)
 src_list_build = $(wildcard $(src_folder)$(src_package)*.java)
