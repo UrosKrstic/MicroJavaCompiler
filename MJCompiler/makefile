@@ -36,7 +36,6 @@ test_lex: $(output_folder)$(lex_test_package)LexerTest.class
 $(output_folder)$(lex_test_package)LexerTest.class: $(src_list_test)
 	javac $(output_dir_test_lex) $(classpath_test_lex) $(src_list_test)
 
-
 run:
 	java $(classpath_build) rs.ac.bg.etf.pp1.Compiler $(output_folder)$(mj_source_code_file)
 
@@ -59,6 +58,10 @@ clean_lex:
 clean_pars:
 	rm $(src_folder)$(ast_package)*.java
 
+clean_logs:
+	rm logs/*.log
+
+# ant build commands:
 antdel:
 	ant delete
 
@@ -70,6 +73,3 @@ antbuild:
 
 antrun:
 	ant run -Darg0=$(mj_source_code_file)
-
-clean_logs:
-	rm logs/*.log
