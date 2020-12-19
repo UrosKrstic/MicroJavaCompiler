@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import rs.ac.bg.etf.pp1.ast.Program;
 import rs.ac.bg.etf.pp1.util.Log4JUtils;
-
 import java_cup.runtime.*;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
@@ -44,19 +43,16 @@ public class Compiler {
             logger.info(program.toString(""));
             logger.info("===================================");
 
-            RuleVisitor rv = new RuleVisitor();
-            program.traverseBottomUp(rv);
+            MySymbolTable.init();
+            SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
+            program.traverseBottomUp(semanticAnalyzer);
 
-            logger.info("Program call count: " + rv.programCallCount);
-            logger.info("ConstDeclList call count: " + rv.constDeclListCount);
-            logger.info("ConstDecl call count: " + rv.constDeclCallCount);
-            logger.info("FirstConstDecl call count: " + rv.firstConstDeclCallCount);
+            // logger.info("Program call count: " + rv.programCallCount);
+            // logger.info("ConstDeclList call count: " + rv.constDeclListCount);
+            // logger.info("ConstDecl call count: " + rv.constDeclCallCount);
+            // logger.info("FirstConstDecl call count: " + rv.firstConstDeclCallCount);
 
-            // Symbol token = lexer.next_token();
-            // while (token.sym != sym.EOF) {
-            //     logger.info("[" + token.sym + "] " + token.value.toString());
-            //     token = lexer.next_token();
-            // }
+            MySymbolTable.dump(new MyDumpSymbolTableVisitor());
         }
         catch (Exception e) {
             logger.error(e.getMessage(), e);
