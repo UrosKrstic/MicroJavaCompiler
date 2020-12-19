@@ -15,7 +15,10 @@
                 <exclude name="util/Log4JUtils.java"/>
                 <exclude name="Yylex.java"/>
                 <exclude name="RuleVisitor.java"/>
+                <exclude name="SemanticAnalyzer.java"/>
                 <exclude name="Compiler.java"/>
+                <exclude name="MySymbolTable.java"/>
+                <exclude name="MyDumpSymbolTableVisitor.java"/>
             </fileset>
         </delete>
         <delete>
