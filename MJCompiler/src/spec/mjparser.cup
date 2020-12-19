@@ -51,47 +51,63 @@ terminal Character CHARCONST;
 terminal Boolean BOOLCONST;
 terminal Integer NUMCONST;
 
-nonterminal Program, DeclList, ConstDecls, VarDecls,
-    ConstDecl, VarDecl, OptionalVarDeclList, ClassDecl, OptionalArrayBrackets,
-    ConstValue, OptionalExtendedClassLBrace, Type, MethodDeclListWithBraces, MethodDeclList,
-    MethodDecl, VoidOrType, OptionalFormPars, FormsPars, StatementList, Statement,
-    Term, OptionalMinus, OptionalExpr, Expr, Assignop, Addop, Mulop, Relop, Factor,
-    Designator, OptionalExprInBrackets,
-    OptionalActPars, OptionalActParsWithBrackets, ActPars,
-    Condition, CondTerm, CondFact, TermExpr, FullPrintStatement,
-    DesignatorStatementOptions, OptionalElseStatement, CaseList, ConditionExpr,
-    GlobalVarDecls, GlobalVarDecl, AssignStatementRecover, IfCondExpr,
-    ClassOptionalVarDeclList, ClassVarDecls;
+/* Program related nonterminals */
+nonterminal Program;
 
-precedence  left  ELSE;
+/* Variable, Const and Class definition related nonterminals */
+nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
+        OptionalVarDeclList, ClassDecl, OptionalArrayBrackets, ConstDecl,
+        ConstValue, OptionalExtendedClassLBrace, Type, ConstDeclList,
+        GlobalVarDeclListWithErrorRecovery, GlobalVarDeclWithErrorRecovery,
+        ClassOptionalVarDeclList, ClassVarDecls;
+
+/* Method definition related nonterminals */
+nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
+        VoidOrType, OptionalFormPars, FormsPars;
+
+/* Expression related nonterminals */
+nonterminal StatementList, Statement, Term, OptionalMinus,
+        OptionalExpr, Expr, Assignop, Addop, Mulop, Relop, Factor,
+        Designator, OptionalExprInBrackets, OptionalActPars,
+        OptionalActParsWithBrackets, ActPars, Condition, CondTerm,
+        CondFact, TermExpr;
+
+/* Statement related nonterminals */
+nonterminal FullPrintStatement, DesignatorStatementOptions,
+        OptionalElseStatement, CaseList, ConditionExpr,
+        AssignStatementRecover, IfCondExpr;
+
+precedence left ELSE;
 
 Program ::= (Program) PROGRAM IDENT DeclList
     LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE;
 
-DeclList ::= (ConstDeclList) DeclList ConstDecls
-    | (VarDeclLists) DeclList GlobalVarDecls
+DeclList ::= (GlobalConstDeclList) DeclList ConstDeclListWithErrorRecovery
+    | (GlobalVarDeclList) DeclList GlobalVarDeclListWithErrorRecovery
     | (ClassDeclList) DeclList ClassDecl
     | (NoDeclList);
 
-ConstDecls ::= (FullConstDecl) CONST Type ConstDecl SEMICOLON
+ConstDeclListWithErrorRecovery ::= (FullConstDecl) CONST Type ConstDeclList SEMICOLON
     | (ErrorConstDecls) CONST error SEMICOLON:l
     {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :}
     ;
 
-ConstDecl ::= (NextConstDecl) ConstDecl COMMA IDENT ASSIGN ConstValue
+ConstDeclList ::= (NextConstDecl) ConstDeclList COMMA ConstDecl
     | (ErrorConstDecl) error:l
     {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :}
-    | (SingleConstDecl) IDENT ASSIGN ConstValue;
+    | (SingleConstDecl) ConstDecl;
 
-GlobalVarDecls ::= (FullGlobalVarDecls) Type GlobalVarDecl SEMICOLON
+ConstDecl ::= (ConstDecl) IDENT ASSIGN ConstValue;
+
+GlobalVarDeclListWithErrorRecovery ::= (FullGlobalVarDecls) Type GlobalVarDeclWithErrorRecovery SEMICOLON
     | (ErrorGlobalVarDecls) error SEMICOLON:l
     {: parser.report_error("Izvrsen oporavak unutar definicije globalne promenljive, linija " + lleft, null); :}
     ;
 
-GlobalVarDecl ::= (NextGlobalVarDecl) GlobalVarDecl COMMA IDENT OptionalArrayBrackets
+GlobalVarDeclWithErrorRecovery ::= (NextGlobalVarDecl) GlobalVarDeclWithErrorRecovery COMMA VarDecl
     | (ErrorGlobalDecl) error:l
     {: parser.report_error("Izvrsen oporavak unutar definicije globalne promenljive, linija " + lleft, null); :}
-    | (SingleVarDecl) IDENT OptionalArrayBrackets;
+    | (SingleVarDecl) VarDecl;
 
 ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClassLBrace ClassOptionalVarDeclList
     MethodDeclListWithBraces RIGHT_CURLY_BRACE;
@@ -99,7 +115,7 @@ ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClassLBrace ClassOptionalV
 ClassOptionalVarDeclList ::= (FullClassVarDecl) ClassOptionalVarDeclList ClassVarDecls
     | (NoClassVarDecls);
 
-ClassVarDecls ::= (RegularClassVarDecls) VarDecl SEMICOLON
+ClassVarDecls ::= (RegularClassVarDecls) VarDeclList SEMICOLON
     | (ErrorClassVarDecls) error SEMICOLON:l
     {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :}
     /* | (ErrorClassVarDeclsLBrace) error LEFT_CURLY_BRACE:l
@@ -215,13 +231,13 @@ Designator ::= (InnerDotIdentDesignator) Designator DOT IDENT
 
 OptionalMinus ::= (Minus) SUB | (NoMinus);
 
-OptionalVarDeclList ::= (FullVarDecl) OptionalVarDeclList VarDecls
-    | (NoVarDecls);
+OptionalVarDeclList ::= (FullVarDeclList) OptionalVarDeclList Type VarDeclList SEMICOLON
+    | (NoVarDeclList);
 
-VarDecls ::= (VarDecls) VarDecl SEMICOLON;
+VarDeclList ::= (NextVarDecl) VarDeclList COMMA VarDecl
+    | (SingleDecl) VarDecl;
 
-VarDecl ::= (NextVarDecl) VarDecl COMMA IDENT OptionalArrayBrackets
-    | (SingleDecl) Type IDENT OptionalArrayBrackets;
+VarDecl ::= (VarDecl) IDENT OptionalArrayBrackets;
 
 ConstValue ::= (NumberConst) NUMCONST | (CharConst) CHARCONST | (BooleanConst) BOOLCONST;
 
