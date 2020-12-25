@@ -58,8 +58,9 @@ nonterminal Program;
 nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
         OptionalVarDeclList, ClassDecl, OptionalArrayBrackets, ConstDecl,
         ConstValue, OptionalExtendedClassLBrace, Type, ConstDeclList,
-        GlobalVarDeclListWithErrorRecovery, GlobalVarDeclWithErrorRecovery,
-        ClassOptionalVarDeclList, ClassVarDecls, ConstDeclWithCOMMA;
+        GlobalVarDeclListWithErrorRecovery,
+        ClassOptionalVarDeclList, ClassVarDecls, ConstDeclWithCOMMA,
+        GlobalVarDecl, GlobalVarDeclWithCOMMA;
 
 /* Method definition related nonterminals */
 nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
@@ -115,15 +116,26 @@ ConstDeclWithCOMMA ::= (FullConstDeclWithCOMMA) ConstDecl COMMA
 
 ConstDecl ::= (ConstDecl) IDENT ASSIGN ConstValue;
 
-GlobalVarDeclListWithErrorRecovery ::= (FullGlobalVarDecls) Type GlobalVarDeclWithErrorRecovery SEMICOLON
-    | (ErrorGlobalVarDecls) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije globalne promenljive, linija " + lleft, null); :}
+GlobalVarDeclListWithErrorRecovery ::= (FullGlobalVarDeclList) Type GlobalVarDecl
+    | (ErrorGlobalVarDeclList) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar deklaracije globalne promenljive do SEMICOLON-a [1], linija " + lleft, null); :}
     ;
 
-GlobalVarDeclWithErrorRecovery ::= (NextGlobalVarDecl) GlobalVarDeclWithErrorRecovery COMMA VarDecl
+GlobalVarDecl ::= (FullGlobalVarDecl) VarDecl SEMICOLON
+    | (ErrorGlobalVarDecl) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar deklaracije globalne promenljive do SEMICOLON-a [2], linija " + lleft, null); :}
+    | (FullGlobalVarDeclWithCOMMA) GlobalVarDeclWithCOMMA GlobalVarDecl
+    ;
+
+GlobalVarDeclWithCOMMA ::= (NextGlobalVarDeclWithCOMMA) VarDecl COMMA
+    | (ErrorGlobalVarDeclWithCOMMA) error COMMA:l
+    {: parser.report_error("Izvrsen oporavak unutar deklaracije globalne promenljive do COMMA-e, linija " + lleft, null); :}
+    ;
+
+/* GlobalVarDeclWithErrorRecovery ::= (NextGlobalVarDecl) GlobalVarDeclWithErrorRecovery COMMA VarDecl
     | (ErrorGlobalDecl) error:l
     {: parser.report_error("Izvrsen oporavak unutar definicije globalne promenljive, linija " + lleft, null); :}
-    | (SingleVarDecl) VarDecl;
+    | (SingleVarDecl) VarDecl; */
 
 ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClassLBrace ClassOptionalVarDeclList
     MethodDeclListWithBraces RIGHT_CURLY_BRACE;
