@@ -59,7 +59,7 @@ nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
         OptionalVarDeclList, ClassDecl, OptionalArrayBrackets, ConstDecl,
         ConstValue, OptionalExtendedClassLBrace, Type, ConstDeclList,
         GlobalVarDeclListWithErrorRecovery, GlobalVarDeclWithErrorRecovery,
-        ClassOptionalVarDeclList, ClassVarDecls;
+        ClassOptionalVarDeclList, ClassVarDecls, ConstDeclWithCOMMA;
 
 /* Method definition related nonterminals */
 nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
@@ -87,15 +87,31 @@ DeclList ::= (GlobalConstDeclList) DeclList ConstDeclListWithErrorRecovery
     | (ClassDeclList) DeclList ClassDecl
     | (NoDeclList);
 
-ConstDeclListWithErrorRecovery ::= (FullConstDecl) CONST Type ConstDeclList SEMICOLON
-    | (ErrorConstDecls) CONST error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :}
+ConstDeclListWithErrorRecovery ::= (FullConstDeclListWithErrorRecovery) CONST Type ConstDeclList
+    | (ErrorConstDeclWithErrorRecovery) CONST error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do SEMICOLON-a [1], linija " + lleft, null); :}
     ;
 
-ConstDeclList ::= (NextConstDecl) ConstDeclList COMMA ConstDecl
+ConstDeclList ::= (FullConstDeclWithSEMICOLON) ConstDecl SEMICOLON
+    | (ErrorConstDeclWithSEMICOLON) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do SEMICOLON-a [2], linija " + lleft, null); :}
+    | (ConstDeclListCOMMA) ConstDeclWithCOMMA ConstDeclList
+    ;
+
+/* ConstDeclWithSEMICOLON ::= (FullConstDeclWithSEMICOLON) ConstDecl SEMICOLON
+    | (ErrorConstDeclWithSEMICOLON) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do SEMICOLON, linija " + lleft, null); :}
+    ; */
+
+ConstDeclWithCOMMA ::= (FullConstDeclWithCOMMA) ConstDecl COMMA
+    | (ErrorConstDeclWithCOMMA) error COMMA:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do COMMA, linija " + lleft, null); :}
+    ;
+
+/* ConstDeclList ::= (NextConstDecl) ConstDeclList COMMA ConstDecl
     | (ErrorConstDecl) error:l
     {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :}
-    | (SingleConstDecl) ConstDecl;
+    | (SingleConstDecl) ConstDecl; */
 
 ConstDecl ::= (ConstDecl) IDENT ASSIGN ConstValue;
 
