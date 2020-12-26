@@ -99,22 +99,22 @@ ConstDeclList ::= (FullConstDeclWithSEMICOLON) ConstDecl SEMICOLON
     | (ConstDeclListCOMMA) ConstDeclWithCOMMA ConstDeclList
     ;
 
-/* ConstDeclWithSEMICOLON ::= (FullConstDeclWithSEMICOLON) ConstDecl SEMICOLON
-    | (ErrorConstDeclWithSEMICOLON) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do SEMICOLON, linija " + lleft, null); :}
-    ; */
-
 ConstDeclWithCOMMA ::= (FullConstDeclWithCOMMA) ConstDecl COMMA
     | (ErrorConstDeclWithCOMMA) error COMMA:l
     {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do COMMA, linija " + lleft, null); :}
     ;
 
+ConstDecl ::= (ConstDecl) IDENT ASSIGN ConstValue;
+
+/* ConstDeclWithSEMICOLON ::= (FullConstDeclWithSEMICOLON) ConstDecl SEMICOLON
+    | (ErrorConstDeclWithSEMICOLON) error SEMICOLON:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do SEMICOLON, linija " + lleft, null); :}
+    ; */
+
 /* ConstDeclList ::= (NextConstDecl) ConstDeclList COMMA ConstDecl
     | (ErrorConstDecl) error:l
     {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :}
     | (SingleConstDecl) ConstDecl; */
-
-ConstDecl ::= (ConstDecl) IDENT ASSIGN ConstValue;
 
 GlobalVarDeclListWithErrorRecovery ::= (FullGlobalVarDeclList) Type GlobalVarDecl
     | (ErrorGlobalVarDeclList) error SEMICOLON:l
