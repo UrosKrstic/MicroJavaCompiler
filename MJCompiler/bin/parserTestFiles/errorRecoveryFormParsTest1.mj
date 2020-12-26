@@ -1,0 +1,5 @@
+program MJProgram
+    {
+        int f(int a, int +c, char b) {}
+        int f(int +a) {}
+    }
