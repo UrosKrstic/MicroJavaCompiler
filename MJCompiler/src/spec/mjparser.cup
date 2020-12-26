@@ -64,7 +64,7 @@ nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
 
 /* Method definition related nonterminals */
 nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
-        VoidOrType, OptionalFormPars, FormsPars;
+        VoidOrType, OptionalFormPars, FormsPars, FormParamWithCOMMA;
 
 /* Expression related nonterminals */
 nonterminal StatementList, Statement, Term, OptionalMinus,
@@ -162,13 +162,18 @@ MethodDecl ::= (MethodDecl) VoidOrType IDENT LEFT_PARENTHESIS OptionalFormPars
 VoidOrType ::= (VoidReturnType) VOID
     | (ReturnType) Type;
 
-OptionalFormPars ::= (FullFormPars) FormsPars RIGHT_PARENTHESIS
+OptionalFormPars ::= (FullFormPars) FormsPars
     | (NoFormParams) RIGHT_PARENTHESIS;
 
-FormsPars ::= (InnerFormParam) FormsPars COMMA Type IDENT OptionalArrayBrackets
-    | (ErrorFormsPars) error:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije formalnih parametara metode, liniji " + lleft, null); :}
-    | (SingleFormParam) Type IDENT OptionalArrayBrackets;
+FormsPars ::= (FormParamWithPAREN) Type VarDecl RIGHT_PARENTHESIS
+    | (ErrorFormParamWithPAREN) error RIGHT_PARENTHESIS:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije formalnih parametara metode do ')', linija " + lleft, null); :}
+    | (InnerFormParamWithCOMMA) FormParamWithCOMMA FormsPars;
+
+FormParamWithCOMMA ::= (FullFormParamWithCOMMA) Type VarDecl COMMA
+    | (ErrorFormParamWithCOMMA) error COMMA:l
+    {: parser.report_error("Izvrsen oporavak unutar definicije formalnih parametara metode do ',', linija " + lleft, null); :}
+    ;
 
 StatementList ::= (MethodStatement) StatementList Statement
     | (NoStatement);
