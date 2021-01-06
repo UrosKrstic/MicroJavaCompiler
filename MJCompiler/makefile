@@ -68,6 +68,9 @@ antdel:
 antcl:
 	ant clean_build
 
+antparsgen:
+	ant repackage
+
 antbuild:
 	ant compile
 
