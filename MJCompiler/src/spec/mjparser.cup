@@ -78,10 +78,14 @@ nonterminal FullPrintStatement, DesignatorStatementOptions,
         OptionalElseStatement, CaseList, ConditionExpr,
         AssignStatementRecover, IfCondExpr;
 
+nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName;
+
 precedence left ELSE;
 
-Program ::= (Program) PROGRAM IDENT DeclList
+Program ::= (Program) PROGRAM ProgName:p DeclList
     LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE;
+
+ProgName ::= (ProgName) IDENT:progName;
 
 DeclList ::= (GlobalConstDeclList) DeclList ConstDeclListWithErrorRecovery
     | (GlobalVarDeclList) DeclList GlobalVarDeclListWithErrorRecovery
@@ -265,7 +269,7 @@ OptionalExtendedClassLBrace ::= (ExtendedClass) EXTENDS Type LEFT_CURLY_BRACE
 OptionalArrayBrackets ::= (ArrayBrackets) LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACKET
     | (NoArrayBrackets);
 
-Type ::= (Type) IDENT;
+Type ::= (Type) IDENT:typeName;
 
 Assignop ::= (Assignop) ASSIGN;
 
