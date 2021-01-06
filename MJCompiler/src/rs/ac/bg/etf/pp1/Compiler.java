@@ -47,11 +47,6 @@ public class Compiler {
             SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
             program.traverseBottomUp(semanticAnalyzer);
 
-            // logger.info("Program call count: " + rv.programCallCount);
-            // logger.info("ConstDeclList call count: " + rv.constDeclListCount);
-            // logger.info("ConstDecl call count: " + rv.constDeclCallCount);
-            // logger.info("FirstConstDecl call count: " + rv.firstConstDeclCallCount);
-
             MySymbolTable.dump(new MyDumpSymbolTableVisitor());
         }
         catch (Exception e) {

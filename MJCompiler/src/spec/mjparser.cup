@@ -106,16 +106,6 @@ ConstDeclWithCOMMA ::= (FullConstDeclWithCOMMA) ConstDecl COMMA
 
 ConstDecl ::= (ConstDecl) IDENT ASSIGN ConstValue;
 
-/* ConstDeclWithSEMICOLON ::= (FullConstDeclWithSEMICOLON) ConstDecl SEMICOLON
-    | (ErrorConstDeclWithSEMICOLON) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do SEMICOLON, linija " + lleft, null); :}
-    ; */
-
-/* ConstDeclList ::= (NextConstDecl) ConstDeclList COMMA ConstDecl
-    | (ErrorConstDecl) error:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive, linija " + lleft, null); :}
-    | (SingleConstDecl) ConstDecl; */
-
 GlobalVarDeclListWithErrorRecovery ::= (FullGlobalVarDeclList) Type GlobalVarDecl
     | (ErrorGlobalVarDeclList) error SEMICOLON:l
     {: parser.report_error("Izvrsen oporavak unutar deklaracije globalne promenljive do SEMICOLON-a [1], linija " + lleft, null); :}
@@ -132,11 +122,6 @@ GlobalVarDeclWithCOMMA ::= (NextGlobalVarDeclWithCOMMA) VarDecl COMMA
     {: parser.report_error("Izvrsen oporavak unutar deklaracije globalne promenljive do COMMA-e, linija " + lleft, null); :}
     ;
 
-/* GlobalVarDeclWithErrorRecovery ::= (NextGlobalVarDecl) GlobalVarDeclWithErrorRecovery COMMA VarDecl
-    | (ErrorGlobalDecl) error:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije globalne promenljive, linija " + lleft, null); :}
-    | (SingleVarDecl) VarDecl; */
-
 ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClassLBrace ClassOptionalVarDeclList
     MethodDeclListWithBraces RIGHT_CURLY_BRACE;
 
@@ -146,8 +131,6 @@ ClassOptionalVarDeclList ::= (FullClassVarDecl) ClassOptionalVarDeclList ClassVa
 ClassVarDecls ::= (RegularClassVarDecls) VarDeclList SEMICOLON
     | (ErrorClassVarDecls) error SEMICOLON:l
     {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :}
-    /* | (ErrorClassVarDeclsLBrace) error LEFT_CURLY_BRACE:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :} */
     ;
 
 MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE
