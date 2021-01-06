@@ -79,6 +79,7 @@ nonterminal FullPrintStatement, DesignatorStatementOptions,
         AssignStatementRecover, IfCondExpr;
 
 nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName;
+// nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 
 precedence left ELSE;
 
@@ -257,7 +258,7 @@ OptionalVarDeclList ::= (FullVarDeclList) OptionalVarDeclList Type VarDeclList S
 VarDeclList ::= (NextVarDecl) VarDeclList COMMA VarDecl
     | (SingleDecl) VarDecl;
 
-VarDecl ::= (VarDecl) IDENT OptionalArrayBrackets;
+VarDecl ::= (VarDecl) IDENT:varName OptionalArrayBrackets;
 
 ConstValue ::= (NumberConst) NUMCONST | (CharConst) CHARCONST | (BooleanConst) BOOLCONST;
 

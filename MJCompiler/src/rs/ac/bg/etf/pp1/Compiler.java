@@ -9,6 +9,8 @@ import rs.ac.bg.etf.pp1.util.Log4JUtils;
 import java_cup.runtime.*;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
+import rs.etf.pp1.symboltable.concepts.Struct;
+import java.util.Map;
 
 public class Compiler {
 
@@ -41,13 +43,18 @@ public class Compiler {
                 return;
             }
             logger.info(program.toString(""));
-            logger.info("===================================");
 
+            logger.info("==========================SEMANTIC ANALYSIS==============================");
             MySymbolTable.init();
             SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
             program.traverseBottomUp(semanticAnalyzer);
 
             MySymbolTable.dump(new MyDumpSymbolTableVisitor());
+
+            // for( Map.Entry<Struct, Struct> entry : SemanticAnalyzer.tableOfArrayStructs.entrySet() ){
+            //     System.out.println( entry.getKey().getKind()  + " => [" + entry.getValue().getKind() + "] " +
+            //         + entry.getValue().getElemType().getKind());
+            // }
         }
         catch (Exception e) {
             logger.error(e.getMessage(), e);

@@ -11,6 +11,15 @@ public class MyDumpSymbolTableVisitor extends DumpSymbolTableVisitor {
             case Struct.Bool:
                 output.append("bool");
                 break;
+            case Struct.Array:
+                if (structToVisit.getElemType().getKind() == Struct.Bool) {
+                    output.append("Arr of ");
+                    output.append("bool");
+                }
+                else {
+                    super.visitStructNode(structToVisit);
+                }
+                break;
             default:
                 super.visitStructNode(structToVisit);
                 break;
