@@ -109,7 +109,7 @@ ConstDeclWithCOMMA ::= (FullConstDeclWithCOMMA) ConstDecl COMMA
     {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do COMMA, linija " + lleft, null); :}
     ;
 
-ConstDecl ::= (ConstDecl) IDENT ASSIGN ConstValue;
+ConstDecl ::= (ConstDecl) IDENT:constName ASSIGN ConstValue;
 
 GlobalVarDeclListWithErrorRecovery ::= (FullGlobalVarDeclList) Type GlobalVarDecl
     | (ErrorGlobalVarDeclList) error SEMICOLON:l
