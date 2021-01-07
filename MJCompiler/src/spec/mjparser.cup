@@ -64,7 +64,8 @@ nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
 
 /* Method definition related nonterminals */
 nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
-        VoidOrType, OptionalFormPars, FormsPars, FormParamWithCOMMA;
+        VoidOrType, OptionalFormPars, FormsPars, FormParamWithCOMMA,
+        FormArgsStart, FormArgsEnd;
 
 /* Expression related nonterminals */
 nonterminal StatementList, Statement, Term, OptionalMinus,
@@ -79,6 +80,7 @@ nonterminal FullPrintStatement, DesignatorStatementOptions,
         AssignStatementRecover, IfCondExpr;
 
 nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodReturnTypeAndName;
 // nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 
 precedence left ELSE;
@@ -135,7 +137,7 @@ ClassOptionalVarDeclList ::= (FullClassVarDecl) ClassOptionalVarDeclList ClassVa
 
 ClassVarDecls ::= (RegularClassVarDecls) VarDeclList SEMICOLON
     | (ErrorClassVarDecls) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :}
+    {: parser.report_error("Izvrsen oporavak unutar definicije poljan klase, liniji " + lleft, null); :}
     ;
 
 MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE
@@ -144,16 +146,21 @@ MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE Met
 MethodDeclList ::= (MethodDecls) MethodDeclList MethodDecl
     | (NoMethodDeclList);
 
-MethodDecl ::= (MethodDecl) VoidOrType IDENT LEFT_PARENTHESIS OptionalFormPars
+MethodDecl ::= (MethodDecl) MethodReturnTypeAndName FormArgsStart OptionalFormPars
     OptionalVarDeclList LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE;
+
+MethodReturnTypeAndName ::= (MethodReturnTypeAndName) VoidOrType IDENT:methodName;
+
+FormArgsStart ::= (FormArgsStart) LEFT_PARENTHESIS;
+FormArgsEnd ::= (FormArgsEnd) RIGHT_PARENTHESIS;
 
 VoidOrType ::= (VoidReturnType) VOID
     | (ReturnType) Type;
 
 OptionalFormPars ::= (FullFormPars) FormsPars
-    | (NoFormParams) RIGHT_PARENTHESIS;
+    | (NoFormParams) FormArgsEnd;
 
-FormsPars ::= (FormParamWithPAREN) Type VarDecl RIGHT_PARENTHESIS
+FormsPars ::= (FormParamWithPAREN) Type VarDecl FormArgsEnd
     | (ErrorFormParamWithPAREN) error RIGHT_PARENTHESIS:l
     {: parser.report_error("Izvrsen oporavak unutar definicije formalnih parametara metode do ')', linija " + lleft, null); :}
     | (InnerFormParamWithCOMMA) FormParamWithCOMMA FormsPars;

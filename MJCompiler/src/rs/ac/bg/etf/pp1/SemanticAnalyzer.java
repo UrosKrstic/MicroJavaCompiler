@@ -2,6 +2,7 @@ package rs.ac.bg.etf.pp1;
 
 import org.apache.log4j.Logger;
 import rs.ac.bg.etf.pp1.ast.*;
+import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.Obj;
 import rs.etf.pp1.symboltable.concepts.Struct;
 
@@ -14,6 +15,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private static Struct currentType = MySymbolTable.noType;
     private static String currentTypeName = "noType";
     public static Map<Struct, Struct> tableOfArrayStructs = new LinkedHashMap<Struct, Struct>();
+
+    private static Obj currentMethod = null;
+    private static boolean isClassMethod = false;
+    private static boolean isFormParamDecl = false;
+    private static Map<String, Obj> currentMethodFormParams = new LinkedHashMap<String, Obj>();
 
     Logger log = Logger.getLogger(getClass());
 
@@ -44,9 +50,9 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         return visitor.getOutput();
     }
 
-    public boolean checkForMultipleDeclarations(String symbolName, SyntaxNode info, String messageStart) {
+    public boolean checkForMultipleDeclarations(String symbolName, int level, SyntaxNode info, String messageStart) {
         Obj objNode = MySymbolTable.find(symbolName);
-        if (objNode != MySymbolTable.noObj) {
+        if (objNode != MySymbolTable.noObj && objNode.getLevel() == level) {
             report_error(messageStart + " '" + symbolName + "' already declared", info);
             return true;
         }
@@ -64,28 +70,36 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     public void visit(VarDecl varDecl) {
-        if (checkForMultipleDeclarations(varDecl.getVarName(), varDecl, "Variable name")) return;
+        int level = currentMethod == null ? 0 : 1;
+
+        if (checkForMultipleDeclarations(varDecl.getVarName(), level, varDecl, "Variable name")) 
+            return;
 
         boolean isArray = varDecl.getOptionalArrayBrackets() instanceof ArrayBrackets;
+        Obj objNode = null;
         if (isArray) { // is array
             Struct arrStruct = tableOfArrayStructs.get(currentType);
             if (arrStruct == null) {
                 arrStruct = new Struct(Struct.Array, currentType);
                 tableOfArrayStructs.put(currentType, arrStruct);
             }
-            Obj objNode = MySymbolTable.insert(Obj.Var, varDecl.getVarName(), arrStruct);
+            objNode = MySymbolTable.insert(Obj.Var, varDecl.getVarName(), arrStruct);
             report_info("Declared array variable '" + varDecl.getVarName() + "', symbol: " 
             + "[" + stringifyObjNode(objNode) + "]", varDecl);
         }
         else { // is regular variable
-            Obj objNode = MySymbolTable.insert(Obj.Var, varDecl.getVarName(), currentType);
+            objNode = MySymbolTable.insert(Obj.Var, varDecl.getVarName(), currentType);
             report_info("Declared variable '" + varDecl.getVarName() + "', symbol: " 
             + "[" + stringifyObjNode(objNode) + "]", varDecl);
+        }
+        if (isFormParamDecl && objNode != null) {
+            currentMethodFormParams.put(objNode.getName(), objNode);
         }
     }
 
     public void visit(ConstDecl constDecl) {
-        if (checkForMultipleDeclarations(constDecl.getConstName(), constDecl, "Constant name")) return;
+        if (checkForMultipleDeclarations(constDecl.getConstName(), 0, constDecl, "Constant name"))
+            return;
 
         if (currentType.getKind() == Struct.Bool ||
             currentType.getKind() == Struct.Int ||
@@ -101,16 +115,46 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
             if (constType == currentType.getKind()) {
                 Obj objNode = MySymbolTable.insert(Obj.Con, constDecl.getConstName(), currentType);
-                report_info("Declared constant '" + constDecl.getConstName() + "', symbol: " 
+                report_info("Declared constant '" + constDecl.getConstName() + "', symbol: "
                 + "[" + stringifyObjNode(objNode) + "]", constDecl);
             }
             else {
-                report_error("Invalid value for given type '" + currentTypeName + "' in constant declaration ", constDecl);
+                report_error("Invalid value for given type '" + currentTypeName +
+                    "' in constant declaration ", constDecl);
             }
         }
         else {
             report_error("Invalid type '" + currentTypeName + "' used in constant declaration", constDecl);
         }
+    }
+
+    public void visit(MethodReturnTypeAndName methodReturnTypeAndName) {
+        Struct returnType = MySymbolTable.noType;
+        if (methodReturnTypeAndName.getVoidOrType() instanceof ReturnType) {
+            returnType = currentType;
+        }
+        currentMethod = MySymbolTable.insert(Obj.Meth, methodReturnTypeAndName.getMethodName(), returnType);
+        methodReturnTypeAndName.obj = currentMethod;
+        MySymbolTable.openScope();
+        report_info("Function definition started: " +  methodReturnTypeAndName.getMethodName(), 
+            methodReturnTypeAndName);
+    }
+
+    public void visit(MethodDecl methodDecl) {
+        MySymbolTable.chainLocalSymbols(currentMethod);
+        MySymbolTable.closeScope();
+        currentMethod.setLevel(currentMethodFormParams.size());
+        report_info("Function definition ended: " + stringifyObjNode(currentMethod), methodDecl);
+        currentMethod = null;
+        currentMethodFormParams.clear();
+    }
+
+    public void visit(FormArgsStart formArgsStart) {
+        isFormParamDecl = true;
+    }
+
+    public void visit(FormArgsEnd formArgsEnd) {
+        isFormParamDecl = false;
     }
 
     public void visit(Type type) {
