@@ -68,20 +68,22 @@ nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
         FormArgsStart, FormArgsEnd;
 
 /* Expression related nonterminals */
-nonterminal StatementList, Statement, Term, OptionalMinus,
-        OptionalExpr, Expr, Assignop, Addop, Mulop, Relop, Factor,
-        Designator, OptionalExprInBrackets, OptionalActPars,
+nonterminal StatementList, Statement, OptionalMinus,
+        OptionalExpr, Assignop, Addop, Mulop, Relop,
+        OptionalExprInBrackets, OptionalActPars,
         OptionalActParsWithBrackets, ActPars, Condition, CondTerm,
-        CondFact, TermExpr;
+        CondFact;
 
 /* Statement related nonterminals */
 nonterminal FullPrintStatement, DesignatorStatementOptions,
         OptionalElseStatement, CaseList, ConditionExpr,
-        AssignStatementRecover, IfCondExpr;
+        AssignStatementRecover, IfCondExpr, AssignDesignator,
+        ReadDesignator, FunctionCallStatement;
 
 nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodReturnTypeAndName;
-// nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Expr, Term, TermExpr, Factor, SubTerm, AddopTerm;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator;
 
 precedence left ELSE;
 
@@ -180,7 +182,7 @@ Statement ::= (DesignatorStatement) DesignatorStatementOptions
     | (BreakStatement) BREAK SEMICOLON
     | (ContinueStatement) CONTINUE SEMICOLON
     | (ReturnStatement) RETURN OptionalExpr SEMICOLON
-    | (ReadStatement) READ LEFT_PARENTHESIS Designator RIGHT_PARENTHESIS SEMICOLON
+    | (ReadStatement) READ LEFT_PARENTHESIS ReadDesignator RIGHT_PARENTHESIS SEMICOLON
     | (PrintStatement) FullPrintStatement SEMICOLON
     | (NestedStatement) LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE
     ;
@@ -191,14 +193,20 @@ IfCondExpr ::= (RegularIfCondExpr) LEFT_PARENTHESIS ConditionExpr RIGHT_PARENTHE
     ;
 
 DesignatorStatementOptions ::= (AssignStatementWithErrRecovery) AssignStatementRecover
-    | (FunctionCall) Designator LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS SEMICOLON
+    | (FunctionCall) FunctionCallStatement SEMICOLON
     | (PostIncrement) Designator POSTINC SEMICOLON
     | (PostDecrement) Designator POSTDEC SEMICOLON;
 
-AssignStatementRecover ::= (AssignExpr) Designator Assignop Expr SEMICOLON
+AssignStatementRecover ::= (AssignExpr) AssignDesignator Assignop Expr SEMICOLON
     | (AssignExprError) error SEMICOLON:l
     {: parser.report_error("Izvrsen oporavak od nekorektnog iskaza dodele, liniji " + lleft, null); :}
     ;
+
+FunctionCallStatement ::= (FunctionCallStatement) Designator LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS;
+
+ReadDesignator ::= (ReadDesignator) Designator;
+
+AssignDesignator ::= (AssignDesignator) Designator;
 
 OptionalElseStatement ::= (ElseStatement) ELSE Statement
     | (NoElseStatement);
@@ -229,13 +237,20 @@ CondTerm ::= (NextCondTerm) CondTerm LOGICAL_AND CondFact
 CondFact ::= (FullCondFact) TermExpr Relop TermExpr
     | (SingleCondFact) TermExpr;
 
-TermExpr ::= (NextTermExpr) TermExpr Addop Term
-    | (SingleTermExpr) OptionalMinus Term;
+TermExpr ::= (NextTermExpr) TermExpr AddopTerm
+    | (SingleTermExprWithMinus) SubTerm
+    | (SingleTermExpr) Term
+    ;
+
+SubTerm ::= (SubTerm) SUB Term;
+
+AddopTerm ::= (AddopTerm) Addop Term;
 
 Term ::= (NextTerm) Term Mulop Factor
     | (SingleTerm) Factor;
 
-Factor ::= (DesignatorFactor) Designator OptionalActParsWithBrackets
+Factor ::= (FuncCall) FunctionCallStatement
+    | (DesignatorFactor) Designator
     | (ConstFactor) ConstValue
     | (NewOperatorFactor) NEW Type OptionalExprInBrackets
     | (ExprFactor) LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
@@ -244,8 +259,8 @@ Factor ::= (DesignatorFactor) Designator OptionalActParsWithBrackets
 OptionalExprInBrackets ::= (FullExprInBrackets) LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
     | (NoExprInBrackets);
 
-OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS
-    | (NoActParsWithBrackets);
+// OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS
+//     | (NoActParsWithBrackets);
 
 OptionalActPars ::= (FullActPars) ActPars
     | (NoActPars);
@@ -253,11 +268,11 @@ OptionalActPars ::= (FullActPars) ActPars
 ActPars ::= (NextActPar) ActPars COMMA Expr
     | (SingleActPar) Expr;
 
-Designator ::= (InnerDotIdentDesignator) Designator DOT IDENT
+Designator ::= (InnerDotIdentDesignator) Designator DOT IDENT:classField
     | (InnerExprInBracketsDesignator) Designator LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
-    | (SingleDesignator) IDENT;
+    | (SingleDesignator) IDENT:name;
 
-OptionalMinus ::= (Minus) SUB | (NoMinus);
+// OptionalMinus ::= (Minus) SUB | (NoMinus);
 
 OptionalVarDeclList ::= (FullVarDeclList) OptionalVarDeclList Type VarDeclList SEMICOLON
     | (NoVarDeclList);

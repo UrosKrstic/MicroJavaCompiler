@@ -7,19 +7,28 @@ import rs.etf.pp1.symboltable.concepts.Obj;
 import rs.etf.pp1.symboltable.concepts.Struct;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 
 public class SemanticAnalyzer extends VisitorAdaptor {
-
     private static boolean errorDetected = false;
+
+    // Declarations
     private static Struct currentType = MySymbolTable.noType;
     private static String currentTypeName = "noType";
     public static Map<Struct, Struct> tableOfArrayStructs = new LinkedHashMap<Struct, Struct>();
 
+    // Methods
     private static Obj currentMethod = null;
     private static boolean isClassMethod = false;
     private static boolean isFormParamDecl = false;
     private static Map<String, Obj> currentMethodFormParams = new LinkedHashMap<String, Obj>();
+
+    // Exprs
+    private static boolean accessArray = false;
+    private static Obj currentDesignatorObj = null;
+    private static Queue<Obj> innerDesignators = new LinkedList<>();
 
     Logger log = Logger.getLogger(getClass());
 
@@ -155,6 +164,102 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(FormArgsEnd formArgsEnd) {
         isFormParamDecl = false;
+    }
+
+    public void visit(SingleDesignator singleDesignator) {
+        currentDesignatorObj = MySymbolTable.find(singleDesignator.getName());
+        if (currentDesignatorObj == MySymbolTable.noObj) {
+            report_error("Undeclared symbol '" + singleDesignator.getName() + "'", singleDesignator);
+        }
+    }
+
+    public void visit(InnerExprInBracketsDesignator exprInBracketsDesignator) {
+        if (currentDesignatorObj != null && currentDesignatorObj != MySymbolTable.noObj) {
+            accessArray = true;
+            if (currentDesignatorObj.getKind() == Obj.Var) {
+                if (currentDesignatorObj.getType().getKind() == Struct.Array) {
+                    report_info("Element access of array '" + currentDesignatorObj.getName()
+                        + "', objNode: [" + stringifyObjNode(currentDesignatorObj) + "]",
+                        exprInBracketsDesignator);
+                }
+                else {
+                    report_error("Variable '" + currentDesignatorObj.getName() +
+                    "' is not of array type", exprInBracketsDesignator);
+                }
+            }
+            else if (currentDesignatorObj.getKind() == Obj.Con) {
+                report_error("Constant '" + currentDesignatorObj.getName() +
+                "' cannot be of array type", exprInBracketsDesignator);
+            }
+        }
+    }
+
+    public void visit(InnerDotIdentDesignator innerDotIdentDesignator) {
+        //TODO: implement class support
+    }
+
+    public void visit(FunctionCallStatement funcCallStatement) {
+        if (currentDesignatorObj != MySymbolTable.noObj && !accessArray) {
+            if (currentDesignatorObj.getKind() == Obj.Meth) {
+                report_info("Function call of '" + currentDesignatorObj.getName() + "' objNode:[" +
+                    stringifyObjNode(currentDesignatorObj) + "]", funcCallStatement);
+            }
+            else {
+                report_error("Symbol '" + currentDesignatorObj.getName() + "' not a function",
+                    funcCallStatement);
+            }
+        }
+        else if (accessArray) {
+            accessArray = false;
+            report_error("Array Element cannot be function call", funcCallStatement);
+        }
+    }
+
+    private void handleCurrentDesignator(SyntaxNode info) {
+        if (currentDesignatorObj != MySymbolTable.noObj && !accessArray) {
+            if (currentDesignatorObj.getKind() == Obj.Var) {
+                if (currentDesignatorObj.getLevel() == 0) { // global
+                    report_info("Usage of global variable '" + currentDesignatorObj.getName() 
+                        + "', objNode: [" + stringifyObjNode(currentDesignatorObj) + "]",
+                        info);
+                }
+                else {
+                    if (currentMethodFormParams.containsKey(currentDesignatorObj.getName())) {
+                        report_info("Usage of formal function argument '" + currentDesignatorObj.getName() 
+                            + "', objNode: [" + stringifyObjNode(currentDesignatorObj) + "]",
+                            info);
+                    }
+                    else {
+                        report_info("Usage of local variable '" + currentDesignatorObj.getName() 
+                            + "', objNode: [" + stringifyObjNode(currentDesignatorObj) + "]",
+                            info);
+                    }
+                }
+            }
+            else if (currentDesignatorObj.getKind() == Obj.Con) {
+                report_info("Usage of symbolic constant'" + currentDesignatorObj.getName() 
+                            + "', objNode: [" + stringifyObjNode(currentDesignatorObj) + "]",
+                            info);
+            }
+        }
+        else {
+            accessArray = false;
+        }
+    }
+
+    public void visit(AssignDesignator assignDesignator) {
+        handleCurrentDesignator(assignDesignator);
+        currentDesignatorObj = null;
+    }
+
+    public void visit(ReadDesignator readDesignator) {
+        handleCurrentDesignator(readDesignator);
+        currentDesignatorObj = null;
+    }
+
+    public void visit(DesignatorFactor designatorFactor) {
+        handleCurrentDesignator(designatorFactor);
+        currentDesignatorObj = null;
     }
 
     public void visit(Type type) {
