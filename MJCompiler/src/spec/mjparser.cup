@@ -71,12 +71,11 @@ nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
 nonterminal StatementList, Statement, OptionalMinus,
         OptionalExpr, Assignop, Addop, Mulop, Relop,
         OptionalExprInBrackets, OptionalActPars,
-        OptionalActParsWithBrackets, ActPars, Condition, CondTerm,
-        CondFact;
+        OptionalActParsWithBrackets, ActPars;
 
 /* Statement related nonterminals */
 nonterminal FullPrintStatement,
-        OptionalElseStatement, CaseList, ConditionExpr,
+        OptionalElseStatement, CaseList,
         AssignStatementRecover, IfCondExpr;
 
 nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName;
@@ -84,6 +83,7 @@ nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodReturnTypeAndName;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Expr, Term, TermExpr, Factor, SubTerm, AddopTerm;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, ReadDesignator, AssignDesignator;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj DesignatorStatementOptions, FunctionCallStatement;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Condition, CondTerm, CondFact, ConditionExpr;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 
 precedence left ELSE;
@@ -188,7 +188,7 @@ Statement ::= (DesignatorStatement) DesignatorStatementOptions
     | (NestedStatement) LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE
     ;
 
-IfCondExpr ::= (RegularIfCondExpr) LEFT_PARENTHESIS ConditionExpr RIGHT_PARENTHESIS
+IfCondExpr ::= (RegularIfCondExpr) LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS
     | (ErrorIfCondExpr) error RIGHT_PARENTHESIS:l
     {: parser.report_error("Izvrsen oporavak od nekorektnog logickog iskaza unutar if-a, liniji " + lleft, null); :}
     ;
@@ -202,8 +202,6 @@ AssignStatementRecover ::= (AssignExpr) AssignDesignator Assignop Expr SEMICOLON
     | (AssignExprError) error SEMICOLON:l
     {: parser.report_error("Izvrsen oporavak od nekorektnog iskaza dodele, liniji " + lleft, null); :}
     ;
-
-FunctionCallStatement ::= (FunctionCallStatement) Designator LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS;
 
 ReadDesignator ::= (ReadDesignator) Designator;
 
@@ -221,11 +219,11 @@ FullPrintStatement ::= (SimplePrintStatement) PRINT LEFT_PARENTHESIS Expr RIGHT_
 OptionalExpr ::= (FullExpr) Expr
     | (NoExpr);
 
-ConditionExpr ::= (TernaryConditionExpr) Condition QUESTION_MARK ConditionExpr COLON ConditionExpr
-    | (RegularConditionExpr) Condition;
+// ConditionExpr ::= (TernaryConditionExpr) Condition QUESTION_MARK ConditionExpr COLON ConditionExpr
+//     | (RegularConditionExpr) Condition;
 
 /*---------------IMPORTANT---------------*/
-Expr ::= (TernaryExpr) Condition QUESTION_MARK Expr:firstResult COLON Expr:secondResult
+Expr ::= (TernaryExpr) TermExpr QUESTION_MARK TermExpr COLON TermExpr
     | (RegularExpr) TermExpr;
 
 Condition ::= (NextCondition) Condition LOGICAL_OR CondTerm
@@ -235,8 +233,8 @@ CondTerm ::= (NextCondTerm) CondTerm LOGICAL_AND CondFact
     | (SingleCondTerm) CondFact;
 
 /*---------------IMPORTANT---------------*/
-CondFact ::= (FullCondFact) TermExpr Relop TermExpr
-    | (SingleCondFact) TermExpr;
+CondFact ::= (FullCondFact) Expr Relop Expr
+    | (SingleCondFact) Expr;
 
 TermExpr ::= (NextTermExpr) TermExpr  Addop Term
     | (SingleTermExprWithMinus) SUB Term
@@ -264,6 +262,8 @@ Factor ::= (FuncCall) FunctionCallStatement
 // OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS
 //     | (NoActParsWithBrackets);
 
+FunctionCallStatement ::= (FunctionCallStatement) Designator LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS;
+
 OptionalActPars ::= (FullActPars) ActPars
     | (NoActPars);
 
@@ -284,7 +284,7 @@ VarDeclList ::= (NextVarDecl) VarDeclList COMMA VarDecl
 
 VarDecl ::= (VarDecl) IDENT:varName OptionalArrayBrackets;
 
-ConstValue ::= (NumberConst) NUMCONST | (CharConst) CHARCONST | (BooleanConst) BOOLCONST;
+ConstValue ::= (NumberConst) NUMCONST:numConst | (CharConst) CHARCONST:charConst | (BooleanConst) BOOLCONST:boolConst;
 
 OptionalExtendedClassLBrace ::= (ExtendedClass) EXTENDS Type LEFT_CURLY_BRACE
     | (ErrorExtendedClass) error LEFT_CURLY_BRACE:l
