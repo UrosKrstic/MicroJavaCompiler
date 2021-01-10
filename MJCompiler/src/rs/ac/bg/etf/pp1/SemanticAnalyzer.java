@@ -168,18 +168,6 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         isFormParamDecl = false;
     }
 
-    // public void visit(TernaryConditionExpr ternaryConditionExpr) {
-    //     ternaryConditionExpr.obj = ternaryConditionExpr.getConditionExpr().obj;
-    //     if (!ternaryConditionExpr.getConditionExpr().obj.getType().equals(
-    //         ternaryConditionExpr.getConditionExpr1().obj.getType())) {
-    //             report_error("Second and third expr must be of equivalent types", ternaryConditionExpr);
-    //     }
-    // }
-
-    // public void visit(RegularConditionExpr regularConditionExpr) {
-    //     regularConditionExpr.obj = regularConditionExpr.getCondition().obj;
-    // }
-
     public void visit(SingleCondition singleCondition) {
         singleCondition.obj = singleCondition.getCondTerm().obj;
     }
@@ -214,6 +202,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     public void visit(SingleCondFact singleCondFact) {
+        if (singleCondFact.obj.getType().getKind() != Struct.Bool) {
+            report_error("Invalid type in condition for '" + singleCondFact.obj.getName() + 
+                "', type must be bool", singleCondFact);
+        }
         singleCondFact.obj = singleCondFact.getExpr().obj;
     }
 
@@ -349,16 +341,16 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                         return;
                     } else {
                         report_error(
-                                "Invalid type for array '" + currentDesignatorObj.getName() + "' index, must be int",
-                                exprInBracketsDesignator);
+                            "Invalid type for array '" + currentDesignatorObj.getName() + "' index, must be int",
+                            exprInBracketsDesignator);
                     }
                 } else {
                     report_error("Variable '" + currentDesignatorObj.getName() + "' is not of array type",
-                            exprInBracketsDesignator);
+                        exprInBracketsDesignator);
                 }
             } else if (currentDesignatorObj.getKind() == Obj.Con) {
                 report_error("Constant '" + currentDesignatorObj.getName() + "' cannot be of array type",
-                        exprInBracketsDesignator);
+                    exprInBracketsDesignator);
             }
         }
         exprInBracketsDesignator.obj = currentDesignatorObj;
@@ -371,6 +363,31 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     public void visit(FunctionCallStatement funcCallStatement) {
         Obj currentDesignatorObj = funcCallStatement.getDesignator().obj;
         boolean accessArray = funcCallStatement.getDesignator() instanceof InnerExprInBracketsDesignator;
+        if (currentDesignatorObj != MySymbolTable.noObj && 
+            currentDesignatorObj.getName().equals("len") && !accessArray) {
+            if (funcCallStatement.getOptionalActPars() instanceof FullActPars) {
+                FullActPars fullActPars = (FullActPars) funcCallStatement.getOptionalActPars();
+                ActPars actPars = fullActPars.getActPars();
+                if (((SingleActPar)actPars).getExpr().obj.getType().getKind() == Struct.Array) {
+                    report_info("Function call of '" + currentDesignatorObj.getName() + "' objNode:["
+                        + stringifyObjNode(currentDesignatorObj) + "]", funcCallStatement);
+                    funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(),
+                        currentDesignatorObj.getType());
+                    return;
+                }
+                else {
+                    report_error("Incorrect argument type for '" 
+                        + ((SingleActPar)actPars).getExpr().obj.getName() + "' in function call of '" +
+                        currentDesignatorObj.getName() + "'", funcCallStatement);
+                    return;
+                }
+            }
+            else {
+                report_error("Incorrect number of function arguments in function call of '" + 
+                    currentDesignatorObj.getName() + "'", funcCallStatement);
+                return;
+            }
+        }
         if (currentDesignatorObj != MySymbolTable.noObj && !accessArray) {
             if (currentDesignatorObj.getKind() == Obj.Meth) {
                 Collection<Obj> locals = currentDesignatorObj.getLocalSymbols();
@@ -413,7 +430,6 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(), MySymbolTable.noType);
             }
         } else if (accessArray) {
-            accessArray = false;
             report_error("Array Element cannot be function call", funcCallStatement);
         }
     }
