@@ -57,7 +57,7 @@ nonterminal Program;
 /* Variable, Const and Class definition related nonterminals */
 nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
         OptionalVarDeclList, ClassDecl, OptionalArrayBrackets, ConstDecl,
-        ConstValue, OptionalExtendedClassLBrace, Type, ConstDeclList,
+        ConstValue, OptionalExtendedClassLBrace, ConstDeclList,
         GlobalVarDeclListWithErrorRecovery,
         ClassOptionalVarDeclList, ClassVarDecls, ConstDeclWithCOMMA,
         GlobalVarDecl, GlobalVarDeclWithCOMMA;
@@ -75,15 +75,16 @@ nonterminal StatementList, Statement, OptionalMinus,
         CondFact;
 
 /* Statement related nonterminals */
-nonterminal FullPrintStatement, DesignatorStatementOptions,
+nonterminal FullPrintStatement,
         OptionalElseStatement, CaseList, ConditionExpr,
-        AssignStatementRecover, IfCondExpr, AssignDesignator,
-        ReadDesignator, FunctionCallStatement;
+        AssignStatementRecover, IfCondExpr;
 
 nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodReturnTypeAndName;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Expr, Term, TermExpr, Factor, SubTerm, AddopTerm;
-nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, ReadDesignator, AssignDesignator;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj DesignatorStatementOptions, FunctionCallStatement;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 
 precedence left ELSE;
 
@@ -224,7 +225,7 @@ ConditionExpr ::= (TernaryConditionExpr) Condition QUESTION_MARK ConditionExpr C
     | (RegularConditionExpr) Condition;
 
 /*---------------IMPORTANT---------------*/
-Expr ::= (TernaryExpr) Condition QUESTION_MARK Expr COLON Expr
+Expr ::= (TernaryExpr) Condition QUESTION_MARK Expr:firstResult COLON Expr:secondResult
     | (RegularExpr) TermExpr;
 
 Condition ::= (NextCondition) Condition LOGICAL_OR CondTerm
@@ -237,14 +238,14 @@ CondTerm ::= (NextCondTerm) CondTerm LOGICAL_AND CondFact
 CondFact ::= (FullCondFact) TermExpr Relop TermExpr
     | (SingleCondFact) TermExpr;
 
-TermExpr ::= (NextTermExpr) TermExpr AddopTerm
-    | (SingleTermExprWithMinus) SubTerm
+TermExpr ::= (NextTermExpr) TermExpr  Addop Term
+    | (SingleTermExprWithMinus) SUB Term
     | (SingleTermExpr) Term
     ;
 
-SubTerm ::= (SubTerm) SUB Term;
+// SubTerm ::= (SubTerm) SUB Term;
 
-AddopTerm ::= (AddopTerm) Addop Term;
+// AddopTerm ::= (AddopTerm) Addop Term;
 
 Term ::= (NextTerm) Term Mulop Factor
     | (SingleTerm) Factor;
@@ -252,12 +253,13 @@ Term ::= (NextTerm) Term Mulop Factor
 Factor ::= (FuncCall) FunctionCallStatement
     | (DesignatorFactor) Designator
     | (ConstFactor) ConstValue
-    | (NewOperatorFactor) NEW Type OptionalExprInBrackets
+    | (NewOperatorFactor) NEW Type
+    | (NewOperatorFactorWithBrackets) NEW Type LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
     | (ExprFactor) LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
     ;
 
-OptionalExprInBrackets ::= (FullExprInBrackets) LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
-    | (NoExprInBrackets);
+// OptionalExprInBrackets ::= (FullExprInBrackets) LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
+//     | (NoExprInBrackets);
 
 // OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS
 //     | (NoActParsWithBrackets);

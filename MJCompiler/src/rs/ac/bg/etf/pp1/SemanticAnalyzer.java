@@ -27,8 +27,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     // Exprs
     private static boolean accessArray = false;
-    private static Obj currentDesignatorObj = null;
-    private static Queue<Obj> innerDesignators = new LinkedList<>();
+    private static Struct currentTermType = null;
 
     Logger log = Logger.getLogger(getClass());
 
@@ -166,21 +165,140 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         isFormParamDecl = false;
     }
 
-    public void visit(SingleDesignator singleDesignator) {
-        currentDesignatorObj = MySymbolTable.find(singleDesignator.getName());
-        if (currentDesignatorObj == MySymbolTable.noObj) {
-            report_error("Undeclared symbol '" + singleDesignator.getName() + "'", singleDesignator);
+    public void visit(TernaryExpr ternaryExpr) {
+        if (ternaryExpr.getExpr().obj.getType().getKind() != ternaryExpr.getExpr1().obj.getType().getKind()) {
+            report_error("Second and third expr must be of equivalent types", ternaryExpr);
+        }
+        ternaryExpr.obj = ternaryExpr.getExpr().obj;
+    }
+
+    public void visit(RegularExpr regularExpr) {
+        regularExpr.obj = regularExpr.getTermExpr().obj;
+    }
+
+    public void visit(SingleTermExpr singleTermExpr) {
+        currentTermType = singleTermExpr.getTerm().obj.getType();
+        singleTermExpr.obj = singleTermExpr.getTerm().obj;
+    }
+
+    public void visit(SingleTermExprWithMinus singleTermExprWithMinus) {
+        currentTermType = singleTermExprWithMinus.getTerm().obj.getType();
+        singleTermExprWithMinus.obj = singleTermExprWithMinus.getTerm().obj;
+        if (currentTermType.getKind() != Struct.Int) {
+            report_error("Invalid first minus type in term expression, type must be int", singleTermExprWithMinus);
+        }
+        currentTermType = null;
+    }
+
+    public void visit(NextTermExpr nextTermExpr) {
+        if (currentTermType != null && currentTermType.getKind() != Struct.Int) {
+            report_error("Invalid first type in term expression, type must be int", nextTermExpr);
+        }
+        currentTermType = nextTermExpr.getTerm().obj.getType();
+        nextTermExpr.obj = nextTermExpr.getTerm().obj;
+        if (currentTermType.getKind() != Struct.Int) {
+            report_error("Invalid next type in term expression, type must be int", nextTermExpr);
+        }
+        currentTermType = null;
+    }
+
+    public void visit(SingleTerm singleTerm) {
+        currentTermType = singleTerm.getFactor().obj.getType();
+        singleTerm.obj = singleTerm.getFactor().obj;
+    }
+
+    public void visit(NextTerm nextTerm) {
+        if (currentTermType != null && currentTermType.getKind() != Struct.Int) {
+            report_error("Invalid first type in factor expression, type must be int", nextTerm);
+        }
+        currentTermType = nextTerm.getFactor().obj.getType();
+        nextTerm.obj = nextTerm.getFactor().obj;
+        if (currentTermType.getKind() != Struct.Int) {
+            report_error("Invalid next type in factor expression, type must be int", nextTerm);
+        }
+        currentTermType = null;
+    }
+
+    public void visit(AssignDesignator assignDesignator) {
+        boolean accessArray = assignDesignator.getDesignator() instanceof InnerExprInBracketsDesignator;
+        handleCurrentDesignator(assignDesignator.getDesignator().obj, assignDesignator, accessArray);
+        assignDesignator.obj = assignDesignator.getDesignator().obj;
+    }
+
+    public void visit(ReadDesignator readDesignator) {
+        boolean accessArray = readDesignator.getDesignator() instanceof InnerExprInBracketsDesignator;
+        handleCurrentDesignator(readDesignator.getDesignator().obj, readDesignator, accessArray);
+        readDesignator.obj = readDesignator.getDesignator().obj;
+    }
+
+    public void visit(FunctionCall functionCall) {
+        functionCall.obj = functionCall.getFunctionCallStatement().obj;
+    }
+
+    public void visit(ConstFactor constFactor) {
+        if (constFactor.getConstValue() instanceof BooleanConst) {
+            constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.boolType);
+        }
+        else if (constFactor.getConstValue() instanceof CharConst) {
+            constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.charType);
+        }
+        else {
+            constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.intType);
         }
     }
 
+    public void visit(NewOperatorFactor newOperatorFactor) {
+        if (newOperatorFactor.obj.getType().getKind() != Struct.Class) {
+            report_error("Invalid type in operator 'new', type must be a class", newOperatorFactor);
+        }
+        newOperatorFactor.obj = new Obj(Obj.Var, "newref", newOperatorFactor.getType().struct);
+    }
+
+    public void visit(NewOperatorFactorWithBrackets newOperatorFactor) {
+        if (newOperatorFactor.getExpr().obj.getType().getKind() != Struct.Int) {
+            report_error("Invalid type in brackets of operator 'new', type must be int", newOperatorFactor);
+        }
+        newOperatorFactor.obj = new Obj(Obj.Var, "newrefArr", newOperatorFactor.getType().struct);
+    }
+
+    public void visit(ExprFactor exprFactor) {
+        exprFactor.obj = exprFactor.getExpr().obj;
+    }
+
+    public void visit(FuncCall funcCall) {
+        funcCall.obj = funcCall.getFunctionCallStatement().obj;
+    }
+
+    public void visit(DesignatorFactor designatorFactor) {
+        boolean accessArray = designatorFactor.getDesignator() instanceof InnerExprInBracketsDesignator;
+        handleCurrentDesignator(designatorFactor.getDesignator().obj, designatorFactor, accessArray);
+        designatorFactor.obj = designatorFactor.getDesignator().obj;
+    }
+
+    public void visit(SingleDesignator singleDesignator) {
+        Obj currentDesignatorObj = MySymbolTable.find(singleDesignator.getName());
+        if (currentDesignatorObj == MySymbolTable.noObj) {
+            report_error("Undeclared symbol '" + singleDesignator.getName() + "'", singleDesignator);
+        }
+        singleDesignator.obj = currentDesignatorObj;
+    }
+
     public void visit(InnerExprInBracketsDesignator exprInBracketsDesignator) {
+        Obj currentDesignatorObj = exprInBracketsDesignator.getDesignator().obj;
         if (currentDesignatorObj != null && currentDesignatorObj != MySymbolTable.noObj) {
-            accessArray = true;
             if (currentDesignatorObj.getKind() == Obj.Var) {
                 if (currentDesignatorObj.getType().getKind() == Struct.Array) {
-                    report_info("Element access of array '" + currentDesignatorObj.getName()
-                        + "', objNode: [" + stringifyObjNode(currentDesignatorObj) + "]",
-                        exprInBracketsDesignator);
+                    if (exprInBracketsDesignator.getExpr().obj.getType().getKind() == Struct.Int) {
+                        report_info("Element access of array '" + currentDesignatorObj.getName()
+                            + "', objNode: [" + stringifyObjNode(currentDesignatorObj) + "]",
+                            exprInBracketsDesignator);
+                        exprInBracketsDesignator.obj = new Obj(Obj.Var, "arrelem", currentDesignatorObj.getType().getElemType());
+                        return;
+                    }
+                    else {
+                        report_error("Invalid type for array '" + currentDesignatorObj.getName() +
+                            "' index, must be int", exprInBracketsDesignator);
+                    }
                 }
                 else {
                     report_error("Variable '" + currentDesignatorObj.getName() +
@@ -192,6 +310,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 "' cannot be of array type", exprInBracketsDesignator);
             }
         }
+        exprInBracketsDesignator.obj = currentDesignatorObj;
     }
 
     public void visit(InnerDotIdentDesignator innerDotIdentDesignator) {
@@ -199,14 +318,18 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     public void visit(FunctionCallStatement funcCallStatement) {
+        Obj currentDesignatorObj = funcCallStatement.getDesignator().obj;
+        boolean accessArray = funcCallStatement.getDesignator() instanceof InnerExprInBracketsDesignator;
         if (currentDesignatorObj != MySymbolTable.noObj && !accessArray) {
             if (currentDesignatorObj.getKind() == Obj.Meth) {
                 report_info("Function call of '" + currentDesignatorObj.getName() + "' objNode:[" +
                     stringifyObjNode(currentDesignatorObj) + "]", funcCallStatement);
+                funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(), currentDesignatorObj.getType());
             }
             else {
                 report_error("Symbol '" + currentDesignatorObj.getName() + "' not a function",
                     funcCallStatement);
+                funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(), MySymbolTable.noType);
             }
         }
         else if (accessArray) {
@@ -215,7 +338,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
     }
 
-    private void handleCurrentDesignator(SyntaxNode info) {
+    private void handleCurrentDesignator(Obj currentDesignatorObj, SyntaxNode info, boolean accessArray) {
         if (currentDesignatorObj != MySymbolTable.noObj && !accessArray) {
             if (currentDesignatorObj.getKind() == Obj.Var) {
                 if (currentDesignatorObj.getLevel() == 0) { // global
@@ -238,28 +361,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             }
             else if (currentDesignatorObj.getKind() == Obj.Con) {
                 report_info("Usage of symbolic constant'" + currentDesignatorObj.getName() 
-                            + "', objNode: [" + stringifyObjNode(currentDesignatorObj) + "]",
-                            info);
+                    + "', objNode: [" + stringifyObjNode(currentDesignatorObj) + "]",
+                    info);
             }
         }
-        else {
-            accessArray = false;
-        }
-    }
-
-    public void visit(AssignDesignator assignDesignator) {
-        handleCurrentDesignator(assignDesignator);
-        currentDesignatorObj = null;
-    }
-
-    public void visit(ReadDesignator readDesignator) {
-        handleCurrentDesignator(readDesignator);
-        currentDesignatorObj = null;
-    }
-
-    public void visit(DesignatorFactor designatorFactor) {
-        handleCurrentDesignator(designatorFactor);
-        currentDesignatorObj = null;
     }
 
     public void visit(Type type) {
@@ -278,5 +383,6 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 currentType = MySymbolTable.noType;
             }
         }
+        type.struct = currentType;
     }
 }
