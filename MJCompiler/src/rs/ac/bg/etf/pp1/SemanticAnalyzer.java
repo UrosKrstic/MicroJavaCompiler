@@ -1,18 +1,18 @@
 package rs.ac.bg.etf.pp1;
 
 import org.apache.log4j.Logger;
+
 import rs.ac.bg.etf.pp1.ast.*;
 import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.Obj;
 import rs.etf.pp1.symboltable.concepts.Struct;
+import rs.etf.pp1.symboltable.structure.SymbolDataStructure;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 
 public class SemanticAnalyzer extends VisitorAdaptor {
     private static boolean errorDetected = false;
@@ -22,9 +22,14 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private static String currentTypeName = "noType";
     public static Map<Struct, Struct> tableOfArrayStructs = new LinkedHashMap<Struct, Struct>();
 
+    // Class
+    private static boolean inClassDefinition = false;
+    private static boolean errorInClassDef = false;
+    private static Obj currentClass = null;
+    private Iterator<Obj> parentClassMemberIter = null;
+
     // Methods
     private static Obj currentMethod = null;
-    private static boolean isClassMethod = false;
     private static boolean isFormParamDecl = false;
     private static Map<String, Obj> currentMethodFormParams = new LinkedHashMap<String, Obj>();
 
@@ -77,24 +82,25 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     public void visit(VarDecl varDecl) {
-        int level = currentMethod == null ? 0 : 1;
+        int level = currentMethod == null || inClassDefinition ? 0 : 1;
 
         if (checkForMultipleDeclarations(varDecl.getVarName(), level, varDecl, "Variable name"))
             return;
 
         boolean isArray = varDecl.getOptionalArrayBrackets() instanceof ArrayBrackets;
         Obj objNode = null;
+        int objKind = inClassDefinition && currentMethod == null ? Obj.Fld : Obj.Var;
         if (isArray) { // is array
             Struct arrStruct = tableOfArrayStructs.get(currentType);
             if (arrStruct == null) {
                 arrStruct = new Struct(Struct.Array, currentType);
                 tableOfArrayStructs.put(currentType, arrStruct);
             }
-            objNode = MySymbolTable.insert(Obj.Var, varDecl.getVarName(), arrStruct);
+            objNode = MySymbolTable.insert(objKind, varDecl.getVarName(), arrStruct);
             report_info("Declared array variable '" + varDecl.getVarName() + "', symbol: " + "["
                     + stringifyObjNode(objNode) + "]", varDecl);
         } else { // is regular variable
-            objNode = MySymbolTable.insert(Obj.Var, varDecl.getVarName(), currentType);
+            objNode = MySymbolTable.insert(objKind, varDecl.getVarName(), currentType);
             report_info("Declared variable '" + varDecl.getVarName() + "', symbol: " + "[" + stringifyObjNode(objNode)
                     + "]", varDecl);
         }
@@ -121,12 +127,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 Obj objNode = MySymbolTable.insert(Obj.Con, constDecl.getConstName(), currentType);
                 int constVal = 0;
                 if (constDecl.getConstValue() instanceof CharConst) {
-                    constVal = ((CharConst)constDecl.getConstValue()).getCharConst();
+                    constVal = ((CharConst) constDecl.getConstValue()).getCharConst();
                 } else if (constDecl.getConstValue() instanceof BooleanConst) {
-                    constVal = ((BooleanConst)constDecl.getConstValue()).getBoolConst() ? 1 : 0;
-                }
-                else {
-                    constVal = ((NumberConst)constDecl.getConstValue()).getNumConst();
+                    constVal = ((BooleanConst) constDecl.getConstValue()).getBoolConst() ? 1 : 0;
+                } else {
+                    constVal = ((NumberConst) constDecl.getConstValue()).getNumConst();
                 }
                 objNode.setAdr(constVal);
                 report_info("Declared constant '" + constDecl.getConstName() + "', symbol: " + "["
@@ -140,6 +145,77 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
     }
 
+    public void visit(ClassName className) {
+        inClassDefinition = true;
+        errorInClassDef = checkForMultipleDeclarations(className.getClassName(), 0, className, "Class name");
+        if (errorInClassDef)
+            return;
+
+        currentClass = MySymbolTable.insert(Obj.Type, className.getClassName(), new Struct(Struct.Class));
+        MySymbolTable.openScope();
+        // placeholder for VTP (used in code generation)
+        // MySymbolTable.currentScope.addToLocals(new Obj(Obj.Var, "VTP", MySymbolTable.noType));
+    }
+
+    public void visit(ExtendedClass extendedClass) {
+        if (errorInClassDef)
+            return;
+        Struct parentClassType = extendedClass.getType().struct;
+
+        if (parentClassType.getKind() != Struct.Class) {
+            report_error("Type after extends keyword must be a class type, in class '" + currentClass.getName()
+                    + "' definition", extendedClass);
+            errorInClassDef = true;
+            return;
+        }
+
+        if (currentTypeName.equals(currentClass.getName())) {
+            report_error("Class can't extend itself, in class '" + currentClass.getName() + "' definition",
+                    extendedClass);
+            errorInClassDef = true;
+            return;
+        }
+
+        currentClass.getType().setElementType(parentClassType);
+        //int parentClassFieldCnt = parentClassType.getNumberOfFields() - 1;
+        int parentClassFieldCnt = parentClassType.getNumberOfFields();
+
+        Collection<Obj> parentClassMembers = parentClassType.getMembers();
+        parentClassMemberIter = parentClassMembers.iterator();
+
+        // skipping VTP
+        //parentClassMemberIter.next();
+
+        // inserting all fields from parent class
+        for (int i = 0; i < parentClassFieldCnt; i++) {
+            MySymbolTable.currentScope.addToLocals(parentClassMemberIter.next());
+        }
+    }
+
+    public void visit(ClassDecl classDecl) {
+        if (errorInClassDef) {
+            errorInClassDef = false;
+            inClassDefinition = false;
+            return;
+        }
+
+        Struct parentClassType = currentClass.getType().getElemType();
+
+        if (parentClassType != null) {
+            while (parentClassMemberIter.hasNext()) {
+                Obj parentMethod = parentClassMemberIter.next();
+                if (MySymbolTable.find(parentMethod.getName()).equals(Tab.noObj)) {
+                    MySymbolTable.currentScope.addToLocals(parentMethod);
+                }
+            }
+        }
+
+        MySymbolTable.chainLocalSymbols(currentClass.getType());
+        MySymbolTable.closeScope();
+        inClassDefinition = false;
+        currentClass = null;
+    }
+
     public void visit(MethodReturnTypeAndName methodReturnTypeAndName) {
         Struct returnType = MySymbolTable.noType;
         if (methodReturnTypeAndName.getVoidOrType() instanceof ReturnType) {
@@ -148,6 +224,9 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         currentMethod = MySymbolTable.insert(Obj.Meth, methodReturnTypeAndName.getMethodName(), returnType);
         methodReturnTypeAndName.obj = currentMethod;
         MySymbolTable.openScope();
+        // implicit this argument of a class method
+        if (inClassDefinition)
+            MySymbolTable.insert(Obj.Var, "this", currentClass.getType());
         report_info("Function definition started: " + methodReturnTypeAndName.getMethodName(), methodReturnTypeAndName);
     }
 
@@ -322,7 +401,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(SingleDesignator singleDesignator) {
         Obj currentDesignatorObj = MySymbolTable.find(singleDesignator.getName());
-        if (currentDesignatorObj == MySymbolTable.noObj) {
+        if (currentDesignatorObj.equals(MySymbolTable.noObj)) {
             report_error("Undeclared symbol '" + singleDesignator.getName() + "'", singleDesignator);
         }
         singleDesignator.obj = currentDesignatorObj;
@@ -330,7 +409,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(InnerExprInBracketsDesignator exprInBracketsDesignator) {
         Obj currentDesignatorObj = exprInBracketsDesignator.getDesignator().obj;
-        if (currentDesignatorObj != null && currentDesignatorObj != MySymbolTable.noObj) {
+        if (currentDesignatorObj != null && !currentDesignatorObj.equals(MySymbolTable.noObj)) {
             if (currentDesignatorObj.getKind() == Obj.Var) {
                 if (currentDesignatorObj.getType().getKind() == Struct.Array) {
                     if (exprInBracketsDesignator.getExpr().obj.getType().getKind() == Struct.Int) {
@@ -357,14 +436,33 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     public void visit(InnerDotIdentDesignator innerDotIdentDesignator) {
-        // TODO: implement class support
+        Obj currentDesignatorObj = innerDotIdentDesignator.getDesignator().obj;
+        if (currentDesignatorObj != null && !currentDesignatorObj.equals(MySymbolTable.noObj)) {
+            if (currentDesignatorObj.getType().getKind() != Struct.Class) {
+                Struct classType = currentDesignatorObj.getType();
+                Obj tmp = classType.getMembersTable().searchKey(innerDotIdentDesignator.getClassField());
+                if (tmp != null) {
+                    currentDesignatorObj = tmp;
+                }
+                else {
+                    report_error("Undefined field accessed, at '" +
+                    innerDotIdentDesignator.getClassField() + "'", innerDotIdentDesignator);
+                }
+            }
+            else {
+                report_error("Type of identifier must of a class to allow field access, in '" +
+                    currentDesignatorObj.getName() + "'", innerDotIdentDesignator.getDesignator());
+            }
+        }
+        innerDotIdentDesignator.obj = currentDesignatorObj;
     }
 
     public void visit(FunctionCallStatement funcCallStatement) {
         Obj currentDesignatorObj = funcCallStatement.getDesignator().obj;
         boolean accessArray = funcCallStatement.getDesignator() instanceof InnerExprInBracketsDesignator;
-        if (currentDesignatorObj != MySymbolTable.noObj && 
-            currentDesignatorObj.getName().equals("len") && !accessArray) {
+        if (!currentDesignatorObj.equals(MySymbolTable.noObj) && 
+            currentDesignatorObj.getName().equals("len") && !accessArray &&
+            currentDesignatorObj.getLevel() == 0) {
             if (funcCallStatement.getOptionalActPars() instanceof FullActPars) {
                 FullActPars fullActPars = (FullActPars) funcCallStatement.getOptionalActPars();
                 ActPars actPars = fullActPars.getActPars();
@@ -388,10 +486,14 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 return;
             }
         }
-        if (currentDesignatorObj != MySymbolTable.noObj && !accessArray) {
+        if (!currentDesignatorObj.equals(MySymbolTable.noObj) && !accessArray) {
             if (currentDesignatorObj.getKind() == Obj.Meth) {
+                // cheat way of getting info if func call is class method call
+                boolean isClassMethod = currentDesignatorObj.getType().getMembersTable().searchKey("this") 
+                    != null && inClassDefinition;
                 Collection<Obj> locals = currentDesignatorObj.getLocalSymbols();
                 int formalArgCount = currentDesignatorObj.getLevel();
+                if (isClassMethod) formalArgCount--;
                 ArrayList<Obj> actualArgs = new ArrayList<>();
                 if (funcCallStatement.getOptionalActPars() instanceof FullActPars) {
                     FullActPars fullActPars = (FullActPars) funcCallStatement.getOptionalActPars();
@@ -409,6 +511,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                     return;
                 }
                 Iterator<Obj> iter = locals.iterator();
+                if (isClassMethod) iter.next();
                 boolean errorFound = false;
                 for (int i = actualArgs.size() - 1; i >= 0; i--) {
                     Obj formalArg = iter.next();
@@ -421,10 +524,18 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 }
                 if (errorFound) return;
 
-                report_info("Function call of '" + currentDesignatorObj.getName() + "' objNode:["
+                if (isClassMethod) {
+                    report_info("Class method call of '" + currentDesignatorObj.getName() + "' objNode:["
                         + stringifyObjNode(currentDesignatorObj) + "]", funcCallStatement);
-                funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(),
+                    funcCallStatement.obj = new Obj(Obj.Fld, currentDesignatorObj.getName(),
                         currentDesignatorObj.getType());
+                }
+                else {
+                    report_info("Function call of '" + currentDesignatorObj.getName() + "' objNode:["
+                        + stringifyObjNode(currentDesignatorObj) + "]", funcCallStatement);
+                    funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(),
+                        currentDesignatorObj.getType());
+                }
             } else {
                 report_error("Symbol '" + currentDesignatorObj.getName() + "' not a function", funcCallStatement);
                 funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(), MySymbolTable.noType);
@@ -435,7 +546,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     private void handleCurrentDesignator(Obj currentDesignatorObj, SyntaxNode info, boolean accessArray) {
-        if (currentDesignatorObj != MySymbolTable.noObj && !accessArray) {
+        if (!currentDesignatorObj.equals(MySymbolTable.noObj) && !accessArray) {
             if (currentDesignatorObj.getKind() == Obj.Var) {
                 if (currentDesignatorObj.getLevel() == 0) { // global
                     report_info("Usage of global variable '" + currentDesignatorObj.getName() + "', objNode: ["
@@ -453,13 +564,17 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 report_info("Usage of symbolic constant'" + currentDesignatorObj.getName() + "', objNode: ["
                         + stringifyObjNode(currentDesignatorObj) + "]", info);
             }
+            else if (currentDesignatorObj.getKind() == Obj.Fld) {
+                report_info("Usage of a class field '" + currentDesignatorObj.getName() + "', objNode: ["
+                            + stringifyObjNode(currentDesignatorObj) + "]", info);
+            }
         }
     }
 
     public void visit(Type type) {
         Obj typeNode = MySymbolTable.find(type.getTypeName());
         currentTypeName = type.getTypeName();
-        if (typeNode == MySymbolTable.noObj) {
+        if (typeNode.equals(MySymbolTable.noObj)) {
             report_error("Type '" + type.getTypeName() + "' not found in symbol table", type);
             currentType = MySymbolTable.noType;
         } else {

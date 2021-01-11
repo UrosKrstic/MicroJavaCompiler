@@ -78,7 +78,7 @@ nonterminal FullPrintStatement,
         OptionalElseStatement, CaseList,
         AssignStatementRecover, IfCondExpr;
 
-nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName, ClassName;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodReturnTypeAndName;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Expr, Term, TermExpr, Factor, SubTerm, AddopTerm;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, ReadDesignator, AssignDesignator;
@@ -132,15 +132,22 @@ GlobalVarDeclWithCOMMA ::= (NextGlobalVarDeclWithCOMMA) VarDecl COMMA
     {: parser.report_error("Izvrsen oporavak unutar deklaracije globalne promenljive do COMMA-e, linija " + lleft, null); :}
     ;
 
-ClassDecl ::= (ClassDecl) CLASS IDENT OptionalExtendedClassLBrace ClassOptionalVarDeclList
+ClassDecl ::= (ClassDecl) CLASS ClassName OptionalExtendedClassLBrace ClassOptionalVarDeclList
     MethodDeclListWithBraces RIGHT_CURLY_BRACE;
+
+ClassName ::= (ClassName) IDENT:className;
 
 ClassOptionalVarDeclList ::= (FullClassVarDecl) ClassOptionalVarDeclList ClassVarDecls
     | (NoClassVarDecls);
 
-ClassVarDecls ::= (RegularClassVarDecls) VarDeclList SEMICOLON
+OptionalExtendedClassLBrace ::= (ExtendedClass) EXTENDS Type LEFT_CURLY_BRACE
+    | (ErrorExtendedClass) error LEFT_CURLY_BRACE:l
+    {: parser.report_error("Izvrsen oporavak nekorektnog prosirenja klase, liniji " + lleft, null); :}
+    | (NoExtendedClass) LEFT_CURLY_BRACE;
+
+ClassVarDecls ::= (RegularClassVarDecls) Type VarDeclList SEMICOLON
     | (ErrorClassVarDecls) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije poljan klase, liniji " + lleft, null); :}
+    {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :}
     ;
 
 MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE
@@ -285,11 +292,6 @@ VarDeclList ::= (NextVarDecl) VarDeclList COMMA VarDecl
 VarDecl ::= (VarDecl) IDENT:varName OptionalArrayBrackets;
 
 ConstValue ::= (NumberConst) NUMCONST:numConst | (CharConst) CHARCONST:charConst | (BooleanConst) BOOLCONST:boolConst;
-
-OptionalExtendedClassLBrace ::= (ExtendedClass) EXTENDS Type LEFT_CURLY_BRACE
-    | (ErrorExtendedClass) error LEFT_CURLY_BRACE:l
-    {: parser.report_error("Izvrsen oporavak nekorektnog prosirenja klase, liniji " + lleft, null); :}
-    | (NoExtendedClass) LEFT_CURLY_BRACE;
 
 OptionalArrayBrackets ::= (ArrayBrackets) LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACKET
     | (NoArrayBrackets);
