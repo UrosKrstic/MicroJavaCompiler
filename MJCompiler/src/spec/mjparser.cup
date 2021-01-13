@@ -60,12 +60,12 @@ nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
         ConstValue, OptionalExtendedClassLBrace, ConstDeclList,
         GlobalVarDeclListWithErrorRecovery,
         ClassOptionalVarDeclList, ClassVarDecls, ConstDeclWithCOMMA,
-        GlobalVarDecl, GlobalVarDeclWithCOMMA;
+        GlobalVarDecl, GlobalVarDeclWithCOMMA, MethodDeclStart;
 
 /* Method definition related nonterminals */
 nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
         VoidOrType, OptionalFormPars, FormsPars, FormParamWithCOMMA,
-        FormArgsStart, FormArgsEnd;
+        FormArgsStart, FormArgsEnd, MethodBodyStart;
 
 /* Expression related nonterminals */
 nonterminal StatementList, Statement, OptionalMinus,
@@ -76,7 +76,10 @@ nonterminal StatementList, Statement, OptionalMinus,
 /* Statement related nonterminals */
 nonterminal FullPrintStatement,
         OptionalElseStatement, CaseList,
-        AssignStatementRecover, IfCondExpr;
+        AssignStatementRecover, IfCondExpr,
+        DoWhileStart, DoWhileEnd,
+        BreakKeyword, ContinueKeyword,
+        SwitchStart, SwitchEnd;
 
 nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName, ClassName;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodReturnTypeAndName;
@@ -150,16 +153,20 @@ ClassVarDecls ::= (RegularClassVarDecls) Type VarDeclList SEMICOLON
     {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :}
     ;
 
-MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE
+MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) MethodDeclStart MethodDeclList RIGHT_CURLY_BRACE
     | (NoMethodDeclListWithBraces);
+
+MethodDeclStart ::= (MethodDeclStart) LEFT_CURLY_BRACE;
 
 MethodDeclList ::= (MethodDecls) MethodDeclList MethodDecl
     | (NoMethodDeclList);
 
 MethodDecl ::= (MethodDecl) MethodReturnTypeAndName FormArgsStart OptionalFormPars
-    OptionalVarDeclList LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE;
+    OptionalVarDeclList MethodBodyStart StatementList RIGHT_CURLY_BRACE;
 
 MethodReturnTypeAndName ::= (MethodReturnTypeAndName) VoidOrType IDENT:methodName;
+
+MethodBodyStart ::= (MethodBodyStart) LEFT_CURLY_BRACE;
 
 FormArgsStart ::= (FormArgsStart) LEFT_PARENTHESIS;
 FormArgsEnd ::= (FormArgsEnd) RIGHT_PARENTHESIS;
@@ -185,15 +192,24 @@ StatementList ::= (MethodStatement) StatementList Statement
 
 Statement ::= (DesignatorStatement) DesignatorStatementOptions
     | (IfElseStatement) IF IfCondExpr Statement OptionalElseStatement
-    | (DoWhileStatement) DO Statement WHILE LEFT_PARENTHESIS ConditionExpr RIGHT_PARENTHESIS SEMICOLON
-    | (SwitchStatement) SWITCH LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList RIGHT_CURLY_BRACE
-    | (BreakStatement) BREAK SEMICOLON
-    | (ContinueStatement) CONTINUE SEMICOLON
+    | (DoWhileStatement) DoWhileStart Statement WHILE LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS DoWhileEnd
+    | (SwitchStatement) SwitchStart LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList SwitchEnd
+    | (BreakStatement) BreakKeyword SEMICOLON
+    | (ContinueStatement) ContinueKeyword SEMICOLON
     | (ReturnStatement) RETURN OptionalExpr SEMICOLON
     | (ReadStatement) READ LEFT_PARENTHESIS ReadDesignator RIGHT_PARENTHESIS SEMICOLON
     | (PrintStatement) FullPrintStatement SEMICOLON
     | (NestedStatement) LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE
     ;
+
+DoWhileStart ::= (DoWhileStart) DO;
+DoWhileEnd ::= (DoWhileEnd) SEMICOLON;
+
+SwitchStart ::= (SwitchStart) SWITCH;
+SwitchEnd ::= (SwitchEnd) RIGHT_CURLY_BRACE;
+
+BreakKeyword ::= (BreakKeyword) BREAK;
+ContinueKeyword ::= (ContinueKeyword) CONTINUE;
 
 IfCondExpr ::= (RegularIfCondExpr) LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS
     | (ErrorIfCondExpr) error RIGHT_PARENTHESIS:l
@@ -202,8 +218,8 @@ IfCondExpr ::= (RegularIfCondExpr) LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS
 
 DesignatorStatementOptions ::= (AssignStatementWithErrRecovery) AssignStatementRecover
     | (FunctionCall) FunctionCallStatement SEMICOLON
-    | (PostIncrement) Designator POSTINC SEMICOLON
-    | (PostDecrement) Designator POSTDEC SEMICOLON;
+    | (PostIncrement) AssignDesignator POSTINC SEMICOLON
+    | (PostDecrement) AssignDesignator POSTDEC SEMICOLON;
 
 AssignStatementRecover ::= (AssignExpr) AssignDesignator Assignop Expr SEMICOLON
     | (AssignExprError) error SEMICOLON:l
@@ -217,7 +233,7 @@ AssignDesignator ::= (AssignDesignator) Designator;
 OptionalElseStatement ::= (ElseStatement) ELSE Statement
     | (NoElseStatement);
 
-CaseList ::= (Case) CaseList CASE NUMCONST COLON StatementList
+CaseList ::= (Case) CaseList CASE NUMCONST:numConst COLON StatementList
     | (NoCase);
 
 FullPrintStatement ::= (SimplePrintStatement) PRINT LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
@@ -229,10 +245,6 @@ OptionalExpr ::= (FullExpr) Expr
 // ConditionExpr ::= (TernaryConditionExpr) Condition QUESTION_MARK ConditionExpr COLON ConditionExpr
 //     | (RegularConditionExpr) Condition;
 
-/*---------------IMPORTANT---------------*/
-Expr ::= (TernaryExpr) TermExpr QUESTION_MARK TermExpr COLON TermExpr
-    | (RegularExpr) TermExpr;
-
 Condition ::= (NextCondition) Condition LOGICAL_OR CondTerm
     | (SingleCondition) CondTerm;
 
@@ -242,6 +254,10 @@ CondTerm ::= (NextCondTerm) CondTerm LOGICAL_AND CondFact
 /*---------------IMPORTANT---------------*/
 CondFact ::= (FullCondFact) Expr Relop Expr
     | (SingleCondFact) Expr;
+
+/*---------------IMPORTANT---------------*/
+Expr ::= (TernaryExpr) TermExpr QUESTION_MARK TermExpr COLON TermExpr
+    | (RegularExpr) TermExpr;
 
 TermExpr ::= (NextTermExpr) TermExpr  Addop Term
     | (SingleTermExprWithMinus) SUB Term
