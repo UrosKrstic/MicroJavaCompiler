@@ -304,7 +304,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 assignExpr);
         }
         if (!isAssignable(assignExpr.getExpr().obj.getType(), assignExpr.getAssignDesignator().obj.getType())) {
-            report_error("Types must be assign compatible in assign expression", assignExpr);
+            report_error("Types must be assign-compatible in assign expression", assignExpr);
         }
     }
 
@@ -666,18 +666,19 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(FunctionCallStatement funcCallStatement) {
         Obj currentDesignatorObj = funcCallStatement.getDesignator().obj;
+        funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(), currentDesignatorObj.getType());
         boolean accessArray = funcCallStatement.getDesignator() instanceof InnerExprInBracketsDesignator;
         if (!currentDesignatorObj.equals(MySymbolTable.noObj) &&
             currentDesignatorObj.getName().equals("len") && !accessArray &&
             currentDesignatorObj.getLevel() == 0) {
+            // funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(),
+            // currentDesignatorObj.getType());
             if (funcCallStatement.getOptionalActPars() instanceof FullActPars) {
                 FullActPars fullActPars = (FullActPars) funcCallStatement.getOptionalActPars();
                 ActPars actPars = fullActPars.getActPars();
                 if (((SingleActPar)actPars).getExpr().obj.getType().getKind() == Struct.Array) {
                     report_info("Function call of '" + currentDesignatorObj.getName() + "' objNode:["
                         + stringifyObjNode(currentDesignatorObj) + "]", funcCallStatement);
-                    funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(),
-                        currentDesignatorObj.getType());
                     return;
                 }
                 else {
@@ -718,7 +719,6 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 }
 
                 if (actualArgs.size() != formalArgCount) {
-                    report_info(actualArgs.size() + " " + formalArgCount, funcCallStatement);
                     report_error("Incorrect number of function arguments in function call of '" +
                     currentDesignatorObj.getName() + "'", funcCallStatement);
                     return;
@@ -747,12 +747,12 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 else {
                     report_info("Function call of '" + currentDesignatorObj.getName() + "' objNode:["
                         + stringifyObjNode(currentDesignatorObj) + "]", funcCallStatement);
-                    funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(),
-                        currentDesignatorObj.getType());
+                    // funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(),
+                    //     currentDesignatorObj.getType());
                 }
             } else {
                 report_error("Symbol '" + currentDesignatorObj.getName() + "' not a function", funcCallStatement);
-                funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(), MySymbolTable.noType);
+                // funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(), MySymbolTable.noType);
             }
         } else if (accessArray) {
             report_error("Array Element cannot be function call", funcCallStatement);
