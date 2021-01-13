@@ -103,6 +103,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     public void visit(Program program) {
+        Obj mainFunction = MySymbolTable.find("main");
+        if (mainFunction.equals(MySymbolTable.noObj) || mainFunction.getKind() != Obj.Meth) {
+            report_error("void main() global function missing in program", null);
+        }
         MySymbolTable.chainLocalSymbols(program.getProgName().obj);
         MySymbolTable.closeScope();
     }
@@ -259,6 +263,12 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
         currentMethod = MySymbolTable.insert(Obj.Meth, methodReturnTypeAndName.getMethodName(), returnType);
         methodReturnTypeAndName.obj = currentMethod;
+        if (!inClassDefinition && currentMethod.getName().equals("main")) {
+            if (!currentMethod.getType().equals(MySymbolTable.noType)) {
+                report_error("Incorrect return type for global function main, type must be void",
+                    methodReturnTypeAndName);
+            }
+        }
         MySymbolTable.openScope();
         // implicit this argument of a class method
         if (inClassDefinition) {
@@ -271,6 +281,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     public void visit(MethodBodyStart methodBodyStart) {
         MySymbolTable.chainLocalSymbols(currentMethod);
         currentMethod.setLevel(currentMethodFormParams.size());
+        if (!inClassDefinition && currentMethod.getName().equals("main")) {
+            if (currentMethodFormParams.size() > 0) {
+                report_error("Global function main does not have any arguments", methodBodyStart);
+            }
+        }
     }
 
     public void visit(MethodDecl methodDecl) {
