@@ -12,9 +12,10 @@ ast_class_path = src.rs.ac.bg.etf.pp1.ast
 
 # build
 output_dir_build = -d $(output_folder)
-classpath_build = -cp ".:$(output_folder):$(lib_folder)cup_v10k.jar:$(lib_folder)log4j-1.2.17.jar:$(lib_folder)JFlex.jar:$(lib_folder)symboltable-1-1.jar"
+classpath_build = -cp ".:$(output_folder):$(lib_folder)cup_v10k.jar:$(lib_folder)log4j-1.2.17.jar:$(lib_folder)JFlex.jar:$(lib_folder)symboltable-1-1.jar:$(lib_folder)mj-runtime-1.1.jar"
 mf = program.mj
 mj_source_code_file = $(mf)
+output_file = program.obj
 src_list_build = $(wildcard $(src_folder)$(src_package)*.java)
 util_src_list_build = $(wildcard $(src_folder)$(util_package)*.java)
 ast_src_list_build = $(wildcard $(src_folder)$(ast_package)*.java)
@@ -37,7 +38,7 @@ $(output_folder)$(lex_test_package)LexerTest.class: $(src_list_test)
 	javac $(output_dir_test_lex) $(classpath_test_lex) $(src_list_test)
 
 run:
-	java $(classpath_build) rs.ac.bg.etf.pp1.Compiler $(output_folder)$(mj_source_code_file)
+	java $(classpath_build) rs.ac.bg.etf.pp1.Compiler $(output_folder)$(mj_source_code_file) $(output_folder)$(output_file)
 
 build:
 	javac $(output_dir_build) $(classpath_build) $(src_list_build) $(util_src_list_build) $(ast_src_list_build)
@@ -75,4 +76,14 @@ antbuild:
 	ant compile
 
 antrun:
-	ant run -Darg0=$(mj_source_code_file)
+	ant run -Darg0=bin/$(mj_source_code_file) -Darg1=bin/$(output_file)
+
+antdisasm:
+	ant disasm -Darg0=bin/$(output_file)
+
+antmjbuild:
+	make run
+	make antmjrun
+
+antmjrun:
+	ant runObj -Darg0=bin/$(output_file)

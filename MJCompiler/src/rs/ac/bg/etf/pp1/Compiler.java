@@ -1,6 +1,7 @@
 package rs.ac.bg.etf.pp1;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 
@@ -9,8 +10,8 @@ import rs.ac.bg.etf.pp1.util.Log4JUtils;
 import java_cup.runtime.*;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
-import rs.etf.pp1.symboltable.concepts.Struct;
-import java.util.Map;
+
+import rs.etf.pp1.mj.runtime.Code;
 
 public class Compiler {
 
@@ -22,7 +23,11 @@ public class Compiler {
     public static void main(String[] args) {  
         Logger logger = Logger.getLogger(Compiler.class);
         if (args.length < 1) {
-            logger.error("Error: Missing MJ source code file command-line arg");
+            logger.error("Missing MJ source code file command-line arg");
+            return;
+        }
+        if (args.length < 2) {
+            logger.error("Missing output file name command-line arg");
             return;
         }
         FileReader reader = null;
@@ -51,10 +56,20 @@ public class Compiler {
 
             MySymbolTable.dump(new MyDumpSymbolTableVisitor());
 
-            // for( Map.Entry<Struct, Struct> entry : SemanticAnalyzer.tableOfArrayStructs.entrySet() ){
-            //     System.out.println( entry.getKey().getKind()  + " => [" + entry.getValue().getKind() + "] " +
-            //         + entry.getValue().getElemType().getKind());
-            // }
+            if (semanticAnalyzer.passed()) {
+                logger.info("Parsing has been successful");
+                logger.info("==========================CODE GENERATION==============================");
+                CodeGenerator codeGenerator = new CodeGenerator();
+                program.traverseBottomUp(codeGenerator);
+                Code.dataSize = semanticAnalyzer.globalDataCount;
+                Code.mainPc = codeGenerator.mainPc;
+                File objFile = new File(args[1]);
+                if (objFile.exists()) objFile.delete();
+                Code.write(new FileOutputStream(objFile));
+            }
+            else {
+                logger.error("Parsing has been unsuccessful");
+            }
         }
         catch (Exception e) {
             logger.error(e.getMessage(), e);
