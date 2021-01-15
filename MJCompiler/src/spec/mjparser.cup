@@ -237,7 +237,7 @@ CaseList ::= (Case) CaseList CASE NUMCONST:numConst COLON StatementList
     | (NoCase);
 
 FullPrintStatement ::= (SimplePrintStatement) PRINT LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
-    | (ParameterizedPrintStatement) PRINT LEFT_PARENTHESIS Expr COMMA NUMCONST RIGHT_PARENTHESIS;
+    | (ParameterizedPrintStatement) PRINT LEFT_PARENTHESIS Expr COMMA NUMCONST:printWidth RIGHT_PARENTHESIS;
 
 OptionalExpr ::= (FullExpr) Expr
     | (NoExpr);

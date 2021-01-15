@@ -6,7 +6,6 @@ import rs.ac.bg.etf.pp1.ast.*;
 import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.Obj;
 import rs.etf.pp1.symboltable.concepts.Struct;
-import rs.etf.pp1.symboltable.structure.SymbolDataStructure;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,6 +36,9 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     //Statements
     private static int currentDoWhileCount = 0, currentSwitchCount = 0;
+
+    //Counters
+    public int globalDataCount = 0;
 
     Logger log = Logger.getLogger(getClass());
 
@@ -107,14 +109,15 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (mainFunction.equals(MySymbolTable.noObj) || mainFunction.getKind() != Obj.Meth) {
             report_error("void main() global function missing in program", null);
         }
+        globalDataCount = MySymbolTable.currentScope.getnVars();
         MySymbolTable.chainLocalSymbols(program.getProgName().obj);
         MySymbolTable.closeScope();
     }
 
     public void visit(VarDecl varDecl) {
-        int level = currentMethod == null || inClassDefinition ? 0 : 1;
+        int level = currentMethod == null && !inClassDefinition ? 0 : 1;
 
-        if (checkForMultipleDeclarations(varDecl.getVarName(), level, varDecl, "Variable name"))
+        if (checkForMultipleDeclarations(varDecl.getVarName(), level, varDecl, "Variable name " + level))
             return;
 
         boolean isArray = varDecl.getOptionalArrayBrackets() instanceof ArrayBrackets;
@@ -190,7 +193,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         currentClass = MySymbolTable.insert(Obj.Type, className.getClassName(), new Struct(Struct.Class));
         MySymbolTable.openScope();
         // placeholder for VTP (used in code generation)
-        // MySymbolTable.currentScope.addToLocals(new Obj(Obj.Var, "VTP", MySymbolTable.noType));
+        MySymbolTable.insert(Obj.Fld, "", MySymbolTable.noType);
     }
 
     public void visit(ExtendedClass extendedClass) {
@@ -213,14 +216,14 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
 
         currentClass.getType().setElementType(parentClassType);
-        //int parentClassFieldCnt = parentClassType.getNumberOfFields() - 1;
-        int parentClassFieldCnt = parentClassType.getNumberOfFields();
+        int parentClassFieldCnt = parentClassType.getNumberOfFields() - 1;
+        //int parentClassFieldCnt = parentClassType.getNumberOfFields();
 
         Collection<Obj> parentClassMembers = parentClassType.getMembers();
         parentClassMemberIter = parentClassMembers.iterator();
 
         // skipping VTP
-        //parentClassMemberIter.next();
+        parentClassMemberIter.next();
 
         // inserting all fields from parent class
         for (int i = 0; i < parentClassFieldCnt; i++) {
@@ -299,7 +302,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(AssignExpr assignExpr) {
         if (assignExpr.getAssignDesignator().obj.getKind() != Obj.Var &&
-            assignExpr.getAssignDesignator().obj.getKind() != Obj.Fld) {
+            assignExpr.getAssignDesignator().obj.getKind() != Obj.Fld &&
+            assignExpr.getAssignDesignator().obj.getKind() != Obj.Elem) {
             report_error("Designator in post increment statement must be a variable, array element or class field", 
                 assignExpr);
         }
@@ -310,7 +314,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(PostIncrement postIncrement) {
         if (postIncrement.getAssignDesignator().obj.getKind() != Obj.Var &&
-            postIncrement.getAssignDesignator().obj.getKind() != Obj.Fld) {
+            postIncrement.getAssignDesignator().obj.getKind() != Obj.Fld &&
+            postIncrement.getAssignDesignator().obj.getKind() != Obj.Elem) {
             report_error("Designator in post increment statement must be a variable, array element or class field", 
                 postIncrement);
         }
@@ -321,7 +326,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(PostDecrement postDecrement) {
         if (postDecrement.getAssignDesignator().obj.getKind() != Obj.Var &&
-            postDecrement.getAssignDesignator().obj.getKind() != Obj.Fld) {
+            postDecrement.getAssignDesignator().obj.getKind() != Obj.Fld &&
+            postDecrement.getAssignDesignator().obj.getKind() != Obj.Elem) {
             report_error("Designator in post decrement statement must be a variable, array element or class field", 
                 postDecrement);
         }
@@ -540,17 +546,24 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     public void visit(ConstFactor constFactor) {
+        int constVal = 0;
+
         if (constFactor.getConstValue() instanceof BooleanConst) {
             constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.boolType);
+            constVal = ((BooleanConst) constFactor.getConstValue()).getBoolConst() ? 1 : 0;
         } else if (constFactor.getConstValue() instanceof CharConst) {
             constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.charType);
+            constVal = ((CharConst) constFactor.getConstValue()).getCharConst();
         } else {
             constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.intType);
+            constVal = ((NumberConst) constFactor.getConstValue()).getNumConst();
         }
+
+        constFactor.obj.setAdr(constVal);
     }
 
     public void visit(NewOperatorFactor newOperatorFactor) {
-        if (newOperatorFactor.obj.getType().getKind() != Struct.Class) {
+        if (newOperatorFactor.getType().struct.getKind() != Struct.Class) {
             report_error("Invalid type in operator 'new', type must be a class", newOperatorFactor);
         }
         newOperatorFactor.obj = new Obj(Obj.Var, "newref", newOperatorFactor.getType().struct);
@@ -560,7 +573,9 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (newOperatorFactor.getExpr().obj.getType().getKind() != Struct.Int) {
             report_error("Invalid type in brackets of operator 'new', type must be int", newOperatorFactor);
         }
-        newOperatorFactor.obj = new Obj(Obj.Var, "newrefArr", newOperatorFactor.getType().struct);
+        newOperatorFactor.obj = new Obj(Obj.Var, "newrefArr", tableOfArrayStructs.get(newOperatorFactor.getType().struct)); 
+        report_info("[new operator arr] " + newOperatorFactor.obj.getType().getKind() +
+        newOperatorFactor.obj.getType().getElemType().getKind(), newOperatorFactor);
     }
 
     public void visit(ExprFactor exprFactor) {
@@ -608,7 +623,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                     if (exprInBracketsDesignator.getExpr().obj.getType().getKind() == Struct.Int) {
                         report_info("Element access of array '" + currentDesignatorObj.getName() + "', objNode: ["
                                 + stringifyObjNode(currentDesignatorObj) + "]", exprInBracketsDesignator);
-                        exprInBracketsDesignator.obj = new Obj(Obj.Var, "arrelem",
+                        exprInBracketsDesignator.obj = new Obj(Obj.Elem, "arrelem",
                                 currentDesignatorObj.getType().getElemType());
                         return;
                     } else {
