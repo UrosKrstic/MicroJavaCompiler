@@ -60,8 +60,8 @@ public class Compiler {
                 logger.info("Parsing has been successful");
                 logger.info("==========================CODE GENERATION==============================");
                 CodeGenerator codeGenerator = new CodeGenerator();
-                program.traverseBottomUp(codeGenerator);
                 Code.dataSize = semanticAnalyzer.globalDataCount;
+                program.traverseBottomUp(codeGenerator);
                 Code.mainPc = codeGenerator.mainPc;
                 File objFile = new File(args[1]);
                 if (objFile.exists()) objFile.delete();

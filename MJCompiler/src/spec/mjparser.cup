@@ -58,7 +58,7 @@ nonterminal Program;
 nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
         OptionalVarDeclList, ClassDecl, OptionalArrayBrackets, ConstDecl,
         ConstValue, OptionalExtendedClassLBrace, ConstDeclList,
-        GlobalVarDeclListWithErrorRecovery,
+        GlobalVarDeclListWithErrorRecovery, DeclEnd,
         ClassOptionalVarDeclList, ClassVarDecls, ConstDeclWithCOMMA,
         GlobalVarDecl, GlobalVarDeclWithCOMMA, MethodDeclStart;
 
@@ -92,7 +92,7 @@ nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 precedence left ELSE;
 
 Program ::= (Program) PROGRAM ProgName:p DeclList
-    LEFT_CURLY_BRACE MethodDeclList RIGHT_CURLY_BRACE;
+    DeclEnd MethodDeclList RIGHT_CURLY_BRACE;
 
 ProgName ::= (ProgName) IDENT:progName;
 
@@ -100,6 +100,8 @@ DeclList ::= (GlobalConstDeclList) DeclList ConstDeclListWithErrorRecovery
     | (GlobalVarDeclList) DeclList GlobalVarDeclListWithErrorRecovery
     | (ClassDeclList) DeclList ClassDecl
     | (NoDeclList);
+
+DeclEnd ::= (DeclEnd) LEFT_CURLY_BRACE;
 
 ConstDeclListWithErrorRecovery ::= (FullConstDeclListWithErrorRecovery) CONST Type ConstDeclList
     | (ErrorConstDeclWithErrorRecovery) CONST error SEMICOLON:l

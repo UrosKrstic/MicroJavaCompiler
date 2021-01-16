@@ -1,7 +1,16 @@
 package rs.ac.bg.etf.pp1;
+
 import rs.ac.bg.etf.pp1.ast.*;
 import rs.etf.pp1.mj.runtime.Code;
+import rs.etf.pp1.symboltable.concepts.Obj;
 import rs.etf.pp1.symboltable.concepts.Struct;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
@@ -9,6 +18,56 @@ public class CodeGenerator extends VisitorAdaptor {
     public int mainPc;
 
     private static Logger log = Logger.getLogger(CodeGenerator.class);
+
+    private LinkedList<Obj> definedClasses = new LinkedList<>();
+    private Map<Struct, Integer> vtfPointers  = new LinkedHashMap<>();
+    private boolean inClassDefinition = false;
+
+    private void createVTF() {
+        int staticDataMemoryCurrLoc = Code.dataSize;
+        for (Obj classObj : definedClasses) {
+            report_info("[VTF]" + stringifyObjNode(classObj), null);
+            vtfPointers.put(classObj.getType(), staticDataMemoryCurrLoc);
+            Iterator<Obj> objIter =  classObj.getType().getMembers().iterator();
+            int fieldCount = classObj.getType().getNumberOfFields();
+
+            // skip all class fields
+            for (int i = 0; i < fieldCount; i++) objIter.next();
+
+            // add each method name and address in vtf
+            while (objIter.hasNext()) {
+                Obj methObj = objIter.next();
+                // add method name char by char
+                for (int i = 0; i < methObj.getName().length(); i++) {
+                    Code.loadConst(methObj.getName().charAt(i));
+                    Code.put(Code.putstatic);
+                    Code.put2(staticDataMemoryCurrLoc++);
+                }
+                // add terminal char of method name
+                Code.loadConst(-1);
+                Code.put(Code.putstatic);
+                Code.put2(staticDataMemoryCurrLoc++);
+
+                // add address of method
+                Code.loadConst(methObj.getAdr());
+                Code.put(Code.putstatic);
+                Code.put2(staticDataMemoryCurrLoc++);
+            }
+            Code.loadConst(-2);
+            Code.put(Code.putstatic);
+            Code.put2(staticDataMemoryCurrLoc++);
+        }
+        Code.dataSize = staticDataMemoryCurrLoc;
+    }
+
+    public void visit(ClassName className) {
+        inClassDefinition = true;
+        definedClasses.add(className.obj);
+    }
+
+    public void visit(ClassDecl classDecl) {
+        inClassDefinition = false;
+    }
 
     public void report_info(String message, SyntaxNode info) {
         StringBuilder msg = new StringBuilder(message);
@@ -18,11 +77,22 @@ public class CodeGenerator extends VisitorAdaptor {
         log.info(msg.toString());
     }
 
+    public String stringifyObjNode(Obj objNode) {
+        MyDumpSymbolTableVisitor visitor = new MyDumpSymbolTableVisitor();
+        objNode.accept(visitor);
+        return visitor.getOutput();
+    }
+
     public void visit(MethodReturnTypeAndName methodReturnTypeAndName) {
         methodReturnTypeAndName.obj.setAdr(Code.pc);
+        report_info("[Method Decl] " + stringifyObjNode(methodReturnTypeAndName.obj),
+            methodReturnTypeAndName);
+
         if ("main".equals(methodReturnTypeAndName.getMethodName())) {
             mainPc = Code.pc;
+            createVTF();
         }
+
         int formalParamCount = methodReturnTypeAndName.obj.getLevel();
         int localVarCount = methodReturnTypeAndName.obj.getLocalSymbols().size() - formalParamCount;
         report_info("[Method definition] fpcnt: " + formalParamCount + ", lvcnt: " + localVarCount, methodReturnTypeAndName);
@@ -32,9 +102,71 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put(formalParamCount + localVarCount);
     }
 
-    public void visit(MethodDecl methodDecl) {
-        Code.put(Code.exit); 
+    public void visit(ReturnStatement returnStatement) {
+        Code.put(Code.exit);
         Code.put(Code.return_);
+    }
+
+    public void visit(MethodDecl methodDecl) {
+        if (!methodDecl.getMethodReturnTypeAndName().obj.getType().equals(MySymbolTable.noType)) {
+            Code.put(Code.trap);
+            Code.put(1);
+        }
+        else {
+            Code.put(Code.exit);
+            Code.put(Code.return_);
+        }
+    }
+
+    private int ejlmao = 0;
+
+    private void prepareCall(FunctionCallStatement functionCallStatement) {
+        // cheat way of getting info if func call is class method call
+        // by checking for this hidden formal arg
+        boolean isClassMethod = false;
+        Collection<Obj> locals = functionCallStatement.obj.getLocalSymbols();
+        int formalArgCount = functionCallStatement.obj.getLevel();
+        if (formalArgCount > 0) {
+            isClassMethod = locals.iterator().next().getName().equals("this");
+        }
+
+        if (!isClassMethod) {
+            int oldPc = Code.pc;
+            Code.put(Code.call);
+            Code.put2(functionCallStatement.obj.getAdr() - oldPc);
+        }
+        else {
+            // traverse once more to reload the object of class
+            functionCallStatement.getDesignator().traverseBottomUp(new CodeGenerator());
+
+            //reload manually in case of single designator
+            if (functionCallStatement.getDesignator() instanceof SingleDesignator) {
+                Code.put(Code.load);
+                Code.put(0);
+            }
+
+            // add VTF pointer of current class object
+            Code.put(Code.getfield);
+            Code.put2(0);
+
+            // put invokevirtual call of method
+            Code.put(Code.invokevirtual);
+            String methodName = functionCallStatement.obj.getName();
+            for (int i = 0; i < methodName.length(); i++) {
+                Code.put4(methodName.charAt(i));
+            }
+            Code.put4(-1);
+        }
+    }
+
+    public void visit(FunctionCall functionCall) {
+        prepareCall(functionCall.getFunctionCallStatement());
+        if (!functionCall.getFunctionCallStatement().obj.getType().equals(MySymbolTable.noType))
+                Code.put(Code.pop);
+    }
+
+    public void visit(FuncCall funcCall) {
+        prepareCall(funcCall.getFunctionCallStatement());
     }
 
     public void visit(AssignExpr assignExpr) {
@@ -110,6 +242,12 @@ public class CodeGenerator extends VisitorAdaptor {
         report_info("[NewOp] " + newOperatorFactor.obj.getType().getNumberOfFields(), newOperatorFactor);
         Code.put(Code.new_);
         Code.put2(newOperatorFactor.obj.getType().getNumberOfFields() * 4);
+
+        // LOAD VTF for newly created object of a class
+        Code.put(Code.dup);
+        Code.loadConst(vtfPointers.get(newOperatorFactor.getType().struct));
+        Code.put(Code.putfield);
+        Code.put2(0);
     }
 
     public void visit(NewOperatorFactorWithBrackets newOperatorFactorWithBrackets) {
@@ -125,16 +263,30 @@ public class CodeGenerator extends VisitorAdaptor {
 
     public void visit(SingleDesignator singleDesignator) {
         //Code.load(singleDesignator.obj);
+        //report_info("LMAOs pass:" + ejlmao + " " + stringifyObjNode(singleDesignator.obj), singleDesignator);
+        if (singleDesignator.obj.getKind() == Obj.Meth) {
+            boolean isClassMethod = false;
+            Collection<Obj> locals = singleDesignator.obj.getLocalSymbols();
+            int formalArgCount = singleDesignator.obj.getLevel();
+            if (formalArgCount > 0) {
+                isClassMethod = locals.iterator().next().getName().equals("this");
+            }
+            if (isClassMethod) {
+                Code.put(Code.load);
+                Code.put(0);
+            }
+        }
     }
 
     public void visit(InnerExprInBracketsDesignator innerExprInBracketsDesignator) {
         Code.load(innerExprInBracketsDesignator.getDesignator().obj);
         Code.put(Code.dup_x1);
         Code.put(Code.pop);
+        // report_info("LMAOb pass:" + ejlmao + " " + stringifyObjNode(innerExprInBracketsDesignator.obj), innerExprInBracketsDesignator);
     }
 
     public void visit(InnerDotIdentDesignator innerDotIdentDesignator) {
         Code.load(innerDotIdentDesignator.getDesignator().obj);
-
+        // report_info("LMAOi pass:" + ejlmao + " " + stringifyObjNode(innerDotIdentDesignator.obj), innerDotIdentDesignator);
     }
 }

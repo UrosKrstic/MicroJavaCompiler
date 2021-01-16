@@ -79,21 +79,25 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     private boolean isAssignable(Struct src, Struct dest) {
-
+        report_info("LETS GO -1", null);
         if (src.getKind() != Struct.Class || dest.getKind() != Struct.Class) {
             return src.assignableTo(dest);
         }
-
+        report_info("LETS GO 0", null);
         if (src.assignableTo(dest))
             return true;
 
         boolean isAssignable = false;
         Struct parentStruct = src.getElemType();
+        report_info("LETS GO 1", null);
         while (parentStruct != null) {
+            report_info("LETS GO 2", null);
             if (parentStruct.assignableTo(dest)) {
+                report_info("LETS GO 3", null);
                 isAssignable = true;
                 break;
             }
+            report_info("LETS GO 4", null);
             parentStruct = parentStruct.getElemType();
         }
         return isAssignable;
@@ -191,9 +195,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             return;
 
         currentClass = MySymbolTable.insert(Obj.Type, className.getClassName(), new Struct(Struct.Class));
+        className.obj = currentClass;
         MySymbolTable.openScope();
         // placeholder for VTP (used in code generation)
-        MySymbolTable.insert(Obj.Fld, "", MySymbolTable.noType);
+        MySymbolTable.insert(Obj.Fld, "", MySymbolTable.intType);
     }
 
     public void visit(ExtendedClass extendedClass) {
@@ -223,10 +228,12 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         parentClassMemberIter = parentClassMembers.iterator();
 
         // skipping VTP
+        report_info("Parent class field count: " + stringifyObjNode(new Obj(Obj.Var, "ejl", parentClassType)), extendedClass);
         parentClassMemberIter.next();
 
         // inserting all fields from parent class
         for (int i = 0; i < parentClassFieldCnt; i++) {
+            report_info("Parent field number: " + i, extendedClass);
             MySymbolTable.currentScope.addToLocals(parentClassMemberIter.next());
         }
     }
@@ -304,9 +311,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (assignExpr.getAssignDesignator().obj.getKind() != Obj.Var &&
             assignExpr.getAssignDesignator().obj.getKind() != Obj.Fld &&
             assignExpr.getAssignDesignator().obj.getKind() != Obj.Elem) {
-            report_error("Designator in post increment statement must be a variable, array element or class field", 
+            report_error("Designator in assign statement must be a variable, array element or class field", 
                 assignExpr);
         }
+        report_info("WELL FINE", assignExpr);
         if (!isAssignable(assignExpr.getExpr().obj.getType(), assignExpr.getAssignDesignator().obj.getType())) {
             report_error("Types must be assign-compatible in assign expression", assignExpr);
         }
@@ -566,7 +574,9 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (newOperatorFactor.getType().struct.getKind() != Struct.Class) {
             report_error("Invalid type in operator 'new', type must be a class", newOperatorFactor);
         }
+        report_info("LETS GOOOOOO", newOperatorFactor);
         newOperatorFactor.obj = new Obj(Obj.Var, "newref", newOperatorFactor.getType().struct);
+        report_info(stringifyObjNode(newOperatorFactor.obj), newOperatorFactor);
     }
 
     public void visit(NewOperatorFactorWithBrackets newOperatorFactor) {
@@ -681,7 +691,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(FunctionCallStatement funcCallStatement) {
         Obj currentDesignatorObj = funcCallStatement.getDesignator().obj;
-        funcCallStatement.obj = new Obj(Obj.Var, currentDesignatorObj.getName(), currentDesignatorObj.getType());
+        funcCallStatement.obj = funcCallStatement.getDesignator().obj;
         boolean accessArray = funcCallStatement.getDesignator() instanceof InnerExprInBracketsDesignator;
         if (!currentDesignatorObj.equals(MySymbolTable.noObj) &&
             currentDesignatorObj.getName().equals("len") && !accessArray &&
@@ -756,8 +766,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 if (isClassMethod) {
                     report_info("Class method call of '" + currentDesignatorObj.getName() + "' objNode:["
                         + stringifyObjNode(currentDesignatorObj) + "]", funcCallStatement);
-                    funcCallStatement.obj = new Obj(Obj.Fld, currentDesignatorObj.getName(),
-                        currentDesignatorObj.getType());
+                    // funcCallStatement.obj = new Obj(Obj.Fld, currentDesignatorObj.getName(),
+                    //     currentDesignatorObj.getType());
                 }
                 else {
                     report_info("Function call of '" + currentDesignatorObj.getName() + "' objNode:["
