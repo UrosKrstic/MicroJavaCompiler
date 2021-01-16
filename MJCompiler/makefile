@@ -87,3 +87,6 @@ antmjbuild:
 
 antmjrun:
 	ant runObj -Darg0=bin/$(output_file)
+
+antmjdebug:
+	ant debugObj -Darg0=bin/$(output_file)
