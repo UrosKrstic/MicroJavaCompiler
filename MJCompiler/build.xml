@@ -19,6 +19,7 @@
                 <exclude name="Compiler.java"/>
                 <exclude name="CodeGenerator.java"/>
                 <exclude name="MySymbolTable.java"/>
+                <exclude name="MyStruct.java"/>
                 <exclude name="MyDumpSymbolTableVisitor.java"/>
             </fileset>
         </delete>

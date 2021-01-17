@@ -194,7 +194,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (errorInClassDef)
             return;
 
-        currentClass = MySymbolTable.insert(Obj.Type, className.getClassName(), new Struct(Struct.Class));
+        // My own struct compares class types only by name
+        MyStruct myClassStruct = new MyStruct(Struct.Class);
+        currentClass = MySymbolTable.insert(Obj.Type, className.getClassName(), myClassStruct);
+        myClassStruct.setObjNode(currentClass);
+
         className.obj = currentClass;
         MySymbolTable.openScope();
         // placeholder for VTP (used in code generation)
