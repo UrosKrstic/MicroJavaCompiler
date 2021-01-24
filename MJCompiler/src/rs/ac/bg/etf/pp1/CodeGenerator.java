@@ -60,13 +60,48 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.dataSize = staticDataMemoryCurrLoc;
     }
 
-    public void visit(ClassName className) {
-        inClassDefinition = true;
-        definedClasses.add(className.obj);
-    }
+    private void createBuiltinFunctions() {
+        Obj chrMethObj = MySymbolTable.find("chr");
+        report_info("[CHR]" + stringifyObjNode(chrMethObj), null);
+        chrMethObj.setAdr(Code.pc);
+        Code.put(Code.enter);
+        Code.put(1);
+        Code.put(1);
 
-    public void visit(ClassDecl classDecl) {
-        inClassDefinition = false;
+        Code.put(Code.load);
+        Code.put(0);
+
+        Code.put(Code.exit);
+        Code.put(Code.return_);
+
+
+        Obj ordMethObj = MySymbolTable.find("ord");
+        report_info("[ORD]" + stringifyObjNode(ordMethObj), null);
+        ordMethObj.setAdr(Code.pc);
+        Code.put(Code.enter);
+        Code.put(1);
+        Code.put(1);
+
+        Code.put(Code.load);
+        Code.put(0);
+
+        Code.put(Code.exit);
+        Code.put(Code.return_);
+
+
+        Obj lenMethObj = MySymbolTable.find("len");
+        report_info("[LEN]" + stringifyObjNode(lenMethObj), null);
+        lenMethObj.setAdr(Code.pc);
+        Code.put(Code.enter);
+        Code.put(1);
+        Code.put(1);
+
+        Code.put(Code.load);
+        Code.put(0);
+        Code.put(Code.arraylength);
+
+        Code.put(Code.exit);
+        Code.put(Code.return_);
     }
 
     public void report_info(String message, SyntaxNode info) {
@@ -81,6 +116,19 @@ public class CodeGenerator extends VisitorAdaptor {
         MyDumpSymbolTableVisitor visitor = new MyDumpSymbolTableVisitor();
         objNode.accept(visitor);
         return visitor.getOutput();
+    }
+
+    public void visit(ProgName progName) {
+        createBuiltinFunctions();
+    }
+
+    public void visit(ClassName className) {
+        inClassDefinition = true;
+        definedClasses.add(className.obj);
+    }
+
+    public void visit(ClassDecl classDecl) {
+        inClassDefinition = false;
     }
 
     public void visit(MethodReturnTypeAndName methodReturnTypeAndName) {
@@ -117,8 +165,6 @@ public class CodeGenerator extends VisitorAdaptor {
             Code.put(Code.return_);
         }
     }
-
-    private int ejlmao = 0;
 
     private void prepareCall(FunctionCallStatement functionCallStatement) {
         // cheat way of getting info if func call is class method call
