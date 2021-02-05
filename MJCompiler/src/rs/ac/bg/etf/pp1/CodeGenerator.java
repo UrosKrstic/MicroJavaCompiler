@@ -6,9 +6,11 @@ import rs.etf.pp1.symboltable.concepts.Obj;
 import rs.etf.pp1.symboltable.concepts.Struct;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
@@ -314,22 +316,22 @@ public class CodeGenerator extends VisitorAdaptor {
             if (isFirstTerm) {
                 prevRelOpAddr = endOfIfAddr;
                 if (condFact instanceof SingleCondFact) {
-                    Code.put2(relOpStartAddr, (Code.jcc + Code.eq) << 8);
+                    Code.put2(relOpStartAddr, (Code.jcc + Code.eq) << 8); // inverse
                     Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
                 }
                 else {
                     int relopCode = getInverseRelopCode((FullCondFact)condFact);
-                    Code.put2(relOpStartAddr, (Code.jcc + relopCode) << 8);
+                    Code.put2(relOpStartAddr, (Code.jcc + relopCode) << 8); // inverse
                     Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
                 }
             }
             else {
                 if (condFact instanceof SingleCondFact) {
-                    Code.put2(relOpStartAddr, (Code.jcc + Code.gt) << 8);
+                    Code.put2(relOpStartAddr, (Code.jcc + Code.gt) << 8); // inverse of inverse
                     Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
                 }
                 else {
-                    int relopCode = getInverseRelopCode((FullCondFact)condFact);
+                    int relopCode = getInverseRelopCode((FullCondFact)condFact); // inverse of inverse
                     Code.put2(relOpStartAddr, (Code.jcc + Code.inverse[relopCode]) << 8);
                     Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
                 }
@@ -412,17 +414,64 @@ public class CodeGenerator extends VisitorAdaptor {
     }
 
     private Stack<Integer> doWhileStartAddrs = new Stack<>();
+    private Stack<Integer> switchStartAddrs = new Stack<>();
+    private Map<Integer, LinkedList<Integer>> breaksInStatements = new HashMap<>();
+    private Stack<Boolean> insideDoWhile = new Stack<>();
 
     public void visit(DoWhileStatement doWhileStatement) {
         int startOfWhileAddr = doWhileStartAddrs.pop();
+        insideDoWhile.pop();
         Code.putJump(startOfWhileAddr);
         int endOfWhileAddr = Code.pc;
-        // TODO: handle all break statements here
+
+        // adding the end of do-while address to all inner break statements
+        LinkedList<Integer> breakAddrs = breaksInStatements.get(startOfWhileAddr);
+        for (int breakAddr : breakAddrs) {
+            Code.put2(breakAddr + 1, endOfWhileAddr - breakAddr);
+        }
+        breaksInStatements.remove(startOfWhileAddr);
+
         handleConditionalStatement(doWhileStatement.getCondition(), startOfWhileAddr, endOfWhileAddr);
     }
 
     public void visit(DoWhileStart doWhileStart) {
         doWhileStartAddrs.push(Code.pc);
+        breaksInStatements.put(Code.pc, new LinkedList<Integer>());
+        insideDoWhile.push(true);
+        // report_info("pc of start do-while: " + Code.pc, doWhileStart);
+    }
+
+    public void visit(SwitchStatement switchStatement) {
+        int startOfSwitchAddr = switchStartAddrs.pop();
+        insideDoWhile.pop();
+        int endOfSwitchAddr = Code.pc;
+
+        // adding the end of switch address to all inner break statements
+        LinkedList<Integer> breakAddrs = breaksInStatements.get(startOfSwitchAddr);
+        for (int breakAddr : breakAddrs) {
+            Code.put2(breakAddr + 1, endOfSwitchAddr - breakAddr);
+        }
+        breaksInStatements.remove(startOfSwitchAddr);
+    }
+
+    public void visit(SwitchStart switchStart) {
+        switchStartAddrs.push(Code.pc);
+        breaksInStatements.put(Code.pc, new LinkedList<Integer>());
+        insideDoWhile.push(false);
+    }
+
+    public void visit(BreakStatement breakStatement) {
+        if (insideDoWhile.peek()) {
+            breaksInStatements.get(doWhileStartAddrs.peek()).add(Code.pc);
+        }
+        else {
+            breaksInStatements.get(switchStartAddrs.peek()).add(Code.pc);
+        }
+        Code.putJump(0);
+    }
+
+    public void visit(ContinueStatement continueStatement) {
+        Code.putJump(doWhileStartAddrs.peek());
     }
 
     public void visit(IfElseStatement ifElseStatement) {
