@@ -301,7 +301,7 @@ public class CodeGenerator extends VisitorAdaptor {
     }
 
     private int handleCondTerm(CondTerm condTerm, int startOfIfAddr, int endOfIfAddr,
-        boolean orOpExists) {
+        boolean orOpExists, boolean isFirstTerm) {
         boolean andOpExists = false;
         int prevRelOpAddr = 0;
 
@@ -310,14 +310,29 @@ public class CodeGenerator extends VisitorAdaptor {
             CondFact condFact = ((NextCondTerm)condTerm).getCondFact();
             int relOpStartAddr = condFact.obj.getKind();
             prevRelOpAddr = relOpStartAddr + 3;
-            if (condFact instanceof SingleCondFact) {
-                Code.put2(relOpStartAddr, (Code.jcc + Code.gt) << 8);
-                Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
+
+            if (isFirstTerm) {
+                prevRelOpAddr = endOfIfAddr;
+                if (condFact instanceof SingleCondFact) {
+                    Code.put2(relOpStartAddr, (Code.jcc + Code.eq) << 8);
+                    Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
+                }
+                else {
+                    int relopCode = getInverseRelopCode((FullCondFact)condFact);
+                    Code.put2(relOpStartAddr, (Code.jcc + relopCode) << 8);
+                    Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
+                }
             }
             else {
-                int relopCode = getInverseRelopCode((FullCondFact)condFact);
-                Code.put2(relOpStartAddr, (Code.jcc + Code.inverse[relopCode]) << 8);
-                Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
+                if (condFact instanceof SingleCondFact) {
+                    Code.put2(relOpStartAddr, (Code.jcc + Code.gt) << 8);
+                    Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
+                }
+                else {
+                    int relopCode = getInverseRelopCode((FullCondFact)condFact);
+                    Code.put2(relOpStartAddr, (Code.jcc + Code.inverse[relopCode]) << 8);
+                    Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
+                }
             }
             condTerm = ((NextCondTerm)condTerm).getCondTerm();
         }
@@ -333,17 +348,12 @@ public class CodeGenerator extends VisitorAdaptor {
         return ((SingleCondTerm)condTerm).getCondFact().obj.getKind();
     }
 
-    public void visit(IfElseStatement ifElseStatement) {
-        Condition condition = ((RegularIfCondExpr)ifElseStatement.getIfCondExpr()).getCondition();
-        int startOfIfAddr = ifElseStatement.getIfCondExpr().obj.getKind();
-        int endOfIfAddr =  ifElseStatement.getOptionalElseStatement().obj.getKind();
-        Code.put2(endOfIfAddr - 2, Code.pc - endOfIfAddr + 3);
-
+    private void handleConditionalStatement(Condition condition, int startOfStatement, int endOfStatement) {
         boolean orOpExists = false;
         boolean andOpExists = false;
+        boolean firstTerm = false;
 
         if (condition instanceof NextCondition) {
-            report_info("OR exists", ifElseStatement);
             orOpExists = true;
             CondTerm condTerm = ((NextCondition)condition).getCondTerm();
             CondFact rightMostCondFact;
@@ -364,41 +374,67 @@ public class CodeGenerator extends VisitorAdaptor {
             // right most cond fact
             if (rightMostCondFact instanceof SingleCondFact) {
                 Code.put2(relOpStartAddr, (Code.jcc + Code.eq) << 8);
-                Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
+                Code.put2(relOpStartAddr + 1, endOfStatement - relOpStartAddr);
             }
             else {
                 int relopCode = getInverseRelopCode((FullCondFact)rightMostCondFact);
                 Code.put2(relOpStartAddr, (Code.jcc + relopCode) << 8);
-                Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
+                Code.put2(relOpStartAddr + 1, endOfStatement - relOpStartAddr);
             }
 
             while (condTerm instanceof NextCondTerm) {
-                setRelOp(((NextCondTerm)condTerm).getCondFact(), startOfIfAddr, endOfIfAddr, 
-                    orOpExists, andOpExists, endOfIfAddr);
+                setRelOp(((NextCondTerm)condTerm).getCondFact(), startOfStatement, endOfStatement, 
+                    orOpExists, andOpExists, endOfStatement);
                 condTerm = ((NextCondTerm)condTerm).getCondTerm();
             }
 
             if (!isSingleCondTerm) {
-                setRelOp(((SingleCondTerm)condTerm).getCondFact(), startOfIfAddr, endOfIfAddr, 
-                    orOpExists, andOpExists, endOfIfAddr);
+                setRelOp(((SingleCondTerm)condTerm).getCondFact(), startOfStatement, endOfStatement, 
+                    orOpExists, andOpExists, endOfStatement);
             }
 
             condition = ((NextCondition)condition).getCondition();
             andOpExists = false;
         }
+        else {
+            firstTerm = true;
+        }
 
         while (condition instanceof NextCondition) {
-            handleCondTerm(((NextCondition)condition).getCondTerm(), startOfIfAddr,
-                endOfIfAddr, orOpExists);
+            handleCondTerm(((NextCondition)condition).getCondTerm(), startOfStatement,
+                endOfStatement, orOpExists, firstTerm);
+            if (firstTerm) firstTerm = false;
             condition = ((NextCondition)condition).getCondition();
         }
 
-        handleCondTerm(((SingleCondition)condition).getCondTerm(), startOfIfAddr,
-            endOfIfAddr, orOpExists);
+        handleCondTerm(((SingleCondition)condition).getCondTerm(), startOfStatement,
+            endOfStatement, orOpExists, firstTerm);
+    }
+
+    private Stack<Integer> doWhileStartAddrs = new Stack<>();
+
+    public void visit(DoWhileStatement doWhileStatement) {
+        int startOfWhileAddr = doWhileStartAddrs.pop();
+        Code.putJump(startOfWhileAddr);
+        int endOfWhileAddr = Code.pc;
+        // TODO: handle all break statements here
+        handleConditionalStatement(doWhileStatement.getCondition(), startOfWhileAddr, endOfWhileAddr);
+    }
+
+    public void visit(DoWhileStart doWhileStart) {
+        doWhileStartAddrs.push(Code.pc);
+    }
+
+    public void visit(IfElseStatement ifElseStatement) {
+        Condition condition = ((RegularIfCondExpr)ifElseStatement.getIfCondExpr()).getCondition();
+        int startOfIfAddr = ifElseStatement.getIfCondExpr().obj.getKind();
+        int endOfIfAddr =  ifElseStatement.getOptionalElseStatement().obj.getKind();
+        if (ifElseStatement.getOptionalElseStatement() instanceof ElseStatement)
+            Code.put2(endOfIfAddr - 2, Code.pc - endOfIfAddr + 3);
+        handleConditionalStatement(condition, startOfIfAddr, endOfIfAddr);
     }
 
     public void visit(RegularIfCondExpr ifCondExpr) {
-        report_info("if cond done biatch " + Code.pc, ifCondExpr);
         ifCondExpr.obj = new Obj(Code.pc, "", null);
     }
 
@@ -415,23 +451,6 @@ public class CodeGenerator extends VisitorAdaptor {
         elseKeyword.obj = new Obj(Code.pc, "", null);
     }
 
-
-    public void visit(NextCondition nextCondition) {
-
-    }
-
-    public void visit(SingleCondition singleCondition) {
-
-    }
-
-    public void visit(NextCondTerm nextCondTerm) {
-
-    }
-
-    public void visit(SingleCondTerm singleCondTerm) {
-
-    }
-
     public void visit(FullCondFact fullCondFact) {
         fullCondFact.obj = new Obj(Code.pc, fullCondFact.obj.getName(), fullCondFact.obj.getType());
         Code.putFalseJump(Code.eq, 0); // filler code, to leave space for later
@@ -442,10 +461,6 @@ public class CodeGenerator extends VisitorAdaptor {
         singleCondFact.obj = new Obj(Code.pc, singleCondFact.obj.getName(), singleCondFact.obj.getType());
         Code.putFalseJump(Code.eq, 0); // filler code, to leave space for later
     }
-
-    public void visit(RegularExpr regularExpr) {}
-
-    public void visit(SingleTermExpr singleTermExpr) {}
 
     public void visit(SingleTermExprWithMinus singleTermExprWithMinus) {
         Code.put(Code.neg);
@@ -459,8 +474,6 @@ public class CodeGenerator extends VisitorAdaptor {
             Code.put(Code.sub);
         }
     }
-
-    public void visit(SingleTerm singleTerm) {}
 
     public void visit(NextTerm nextTerm) {
         if (nextTerm.getMulop() instanceof MulMulop) { // MUL
@@ -483,12 +496,12 @@ public class CodeGenerator extends VisitorAdaptor {
     }
 
     public void visit(ConstFactor constFactor) {
-        report_info("[ConstFactor] value: " + constFactor.obj.getAdr(), constFactor);
+        // report_info("[ConstFactor] value: " + constFactor.obj.getAdr(), constFactor);
         Code.load(constFactor.obj);
     }
 
     public void visit(NewOperatorFactor newOperatorFactor) {
-        report_info("[NewOp] " + newOperatorFactor.obj.getType().getNumberOfFields(), newOperatorFactor);
+        // report_info("[NewOp] " + newOperatorFactor.obj.getType().getNumberOfFields(), newOperatorFactor);
         Code.put(Code.new_);
         Code.put2(newOperatorFactor.obj.getType().getNumberOfFields() * 4);
 
