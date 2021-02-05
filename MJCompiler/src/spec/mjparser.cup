@@ -88,7 +88,7 @@ nonterminal rs.etf.pp1.symboltable.concepts.Obj DesignatorStatementOptions, Func
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Condition, CondTerm, CondFact, ConditionExpr;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj OptionalElseStatement, ElseKeyword, IfCondExpr;
-
+ nonterminal rs.etf.pp1.symboltable.concepts.Obj TernaryFirstExpr, TernarySecondExprStart, TernaryThirdExprStart;
 precedence left ELSE;
 
 Program ::= (Program) PROGRAM ProgName:p DeclList
@@ -260,8 +260,12 @@ CondFact ::= (FullCondFact) Expr Relop Expr
     | (SingleCondFact) Expr;
 
 /*---------------IMPORTANT---------------*/
-Expr ::= (TernaryExpr) TermExpr QUESTION_MARK TermExpr COLON TermExpr
+Expr ::= (TernaryExpr) TernaryFirstExpr TernarySecondExprStart TermExpr TernaryThirdExprStart TermExpr
     | (RegularExpr) TermExpr;
+
+TernaryFirstExpr ::= (TernaryFirstExpr) TermExpr;
+TernarySecondExprStart ::= (TernarySecondExprStart) QUESTION_MARK;
+TernaryThirdExprStart ::= (TernaryThirdExprStart) COLON;
 
 TermExpr ::= (NextTermExpr) TermExpr  Addop Term
     | (SingleTermExprWithMinus) SUB Term

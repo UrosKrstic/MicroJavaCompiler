@@ -242,6 +242,30 @@ public class CodeGenerator extends VisitorAdaptor {
         }
     }
 
+    public void visit(PostIncrement postIncrement) {
+        postIncrement.getAssignDesignator().getDesignator().traverseBottomUp(new CodeGenerator());
+
+        if (postIncrement.getAssignDesignator().getDesignator() instanceof SingleDesignator) {
+            Code.load(postIncrement.getAssignDesignator().obj);
+        }
+
+        Code.loadConst(1);
+        Code.put(Code.add);
+        Code.store(postIncrement.getAssignDesignator().obj);
+    }
+
+    public void visit(PostDecrement postDecrement) {
+        postDecrement.getAssignDesignator().getDesignator().traverseBottomUp(new CodeGenerator());
+
+        if (postDecrement.getAssignDesignator().getDesignator() instanceof SingleDesignator) {
+            Code.load(postDecrement.getAssignDesignator().obj);
+        }
+
+        Code.loadConst(1);
+        Code.put(Code.sub);
+        Code.store(postDecrement.getAssignDesignator().obj);
+    }
+
     private int getInverseRelopCode(FullCondFact fullCondFact) {
         Relop relop = fullCondFact.getRelop();
         int relopCode = 0;
@@ -481,6 +505,25 @@ public class CodeGenerator extends VisitorAdaptor {
         if (ifElseStatement.getOptionalElseStatement() instanceof ElseStatement)
             Code.put2(endOfIfAddr - 2, Code.pc - endOfIfAddr + 3);
         handleConditionalStatement(condition, startOfIfAddr, endOfIfAddr);
+    }
+
+    public void visit(TernaryExpr ternaryExpr) {
+        int ternaryRelOpAddr = ternaryExpr.getTernaryFirstExpr().obj.getKind();
+        int ternaryStartAddrOfThirdExpr = ternaryExpr.getTernaryThirdExprStart().obj.getKind();
+        Code.put2(ternaryRelOpAddr + 1, ternaryStartAddrOfThirdExpr - ternaryRelOpAddr);
+        Code.put2(ternaryStartAddrOfThirdExpr - 2, Code.pc - ternaryStartAddrOfThirdExpr + 3);
+    }
+
+    public void visit(TernaryFirstExpr ternaryFirstExpr) {
+        Code.loadConst(0);
+        ternaryFirstExpr.obj = new Obj(Code.pc, "", null);
+        Code.put(Code.jcc + Code.eq);
+        Code.put2(0);
+    }
+
+    public void visit(TernaryThirdExprStart ternaryThirdExprStart) {
+        Code.putJump(0);
+        ternaryThirdExprStart.obj = new Obj(Code.pc, "", null);
     }
 
     public void visit(RegularIfCondExpr ifCondExpr) {
