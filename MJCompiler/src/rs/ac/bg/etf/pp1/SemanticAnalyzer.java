@@ -455,9 +455,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         Struct struct1 = fullCondFact.getExpr().obj.getType();
         Struct struct2 = fullCondFact.getExpr1().obj.getType();
 
-        if (struct1.compatibleWith(struct2)) {
+        if (!struct1.compatibleWith(struct2)) {
             report_error("Types in relop must be compatible", fullCondFact);
         }
+
         if (struct1.isRefType() || struct2.isRefType()) {
             if (!(fullCondFact.getRelop() instanceof EqualsRelop)
                     && !(fullCondFact.getRelop() instanceof NotEqualsRelop)) {
@@ -567,6 +568,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.charType);
             constVal = ((CharConst) constFactor.getConstValue()).getCharConst();
         } else {
+            report_info("Lets go int bby", constFactor);
             constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.intType);
             constVal = ((NumberConst) constFactor.getConstValue()).getNumConst();
         }

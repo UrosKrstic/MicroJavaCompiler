@@ -119,7 +119,7 @@ public class CodeGenerator extends VisitorAdaptor {
     }
 
     public void visit(ProgName progName) {
-        createBuiltinFunctions();
+        // createBuiltinFunctions();
     }
 
     public void visit(ClassName className) {
@@ -225,7 +225,7 @@ public class CodeGenerator extends VisitorAdaptor {
             Code.put(Code.print);
         }
         else {
-            Code.loadConst(1); 
+            Code.loadConst(1);
             Code.put(Code.bprint);
         }
     }
@@ -238,6 +238,209 @@ public class CodeGenerator extends VisitorAdaptor {
         else {
             Code.put(Code.bprint);
         }
+    }
+
+    private int getInverseRelopCode(FullCondFact fullCondFact) {
+        Relop relop = fullCondFact.getRelop();
+        int relopCode = 0;
+
+        if (relop instanceof EqualsRelop) {
+            relopCode = Code.inverse[Code.eq];
+        }
+        else if (relop instanceof NotEqualsRelop) {
+            relopCode = Code.inverse[Code.ne];
+        }
+        else if (relop instanceof GreaterRelop) {
+            relopCode = Code.inverse[Code.gt];
+        }
+        else if (relop instanceof GreaterEqualsRelop) {
+            relopCode = Code.inverse[Code.ge];
+        }
+        else if (relop instanceof LesserRelop) {
+            relopCode = Code.inverse[Code.lt];
+        }
+        else if (relop instanceof LesserEqualsRelop) {
+            relopCode = Code.inverse[Code.le];
+        }
+
+        return relopCode;
+    }
+
+    private void setRelOp(CondFact condFact, int startOfIfAddr, int endOfIfAddr, boolean orOpExists, 
+        boolean andOpExists, int prevRelOpAddr) {
+        int relOpStartAddr = condFact.obj.getKind();
+        if (condFact instanceof SingleCondFact) {
+            if (andOpExists) {
+                Code.put2(relOpStartAddr, (Code.jcc + Code.eq) << 8); // inverse
+                Code.put2(relOpStartAddr + 1, prevRelOpAddr - relOpStartAddr);
+            }
+            else if (orOpExists) {
+                Code.put2(relOpStartAddr, (Code.jcc + Code.gt) << 8); // inverse of inverse
+                Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
+            }
+            else {
+                Code.put2(relOpStartAddr, (Code.jcc + Code.eq) << 8); // inverse
+                Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
+            }
+        }
+        else {
+            int relopCode = getInverseRelopCode((FullCondFact)condFact);
+            if (andOpExists) {
+                Code.put2(relOpStartAddr, (Code.jcc + relopCode) << 8); // inverse
+                Code.put2(relOpStartAddr + 1, prevRelOpAddr - relOpStartAddr);
+            }
+            else if (orOpExists) {
+                Code.put2(relOpStartAddr, (Code.jcc + Code.inverse[relopCode]) << 8); // inverse of inverse
+                Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
+            }
+            else {
+                Code.put2(relOpStartAddr, (Code.jcc + relopCode) << 8); // inverse
+                Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
+            }
+        }
+    }
+
+    private int handleCondTerm(CondTerm condTerm, int startOfIfAddr, int endOfIfAddr,
+        boolean orOpExists) {
+        boolean andOpExists = false;
+        int prevRelOpAddr = 0;
+
+        if (condTerm instanceof NextCondTerm) {
+            andOpExists = true;
+            CondFact condFact = ((NextCondTerm)condTerm).getCondFact();
+            int relOpStartAddr = condFact.obj.getKind();
+            prevRelOpAddr = relOpStartAddr + 3;
+            if (condFact instanceof SingleCondFact) {
+                Code.put2(relOpStartAddr, (Code.jcc + Code.gt) << 8);
+                Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
+            }
+            else {
+                int relopCode = getInverseRelopCode((FullCondFact)condFact);
+                Code.put2(relOpStartAddr, (Code.jcc + Code.inverse[relopCode]) << 8);
+                Code.put2(relOpStartAddr + 1, startOfIfAddr - relOpStartAddr);
+            }
+            condTerm = ((NextCondTerm)condTerm).getCondTerm();
+        }
+
+        while (condTerm instanceof NextCondTerm) {
+            setRelOp(((NextCondTerm)condTerm).getCondFact(), startOfIfAddr, endOfIfAddr,
+                orOpExists, andOpExists, prevRelOpAddr);
+            condTerm = ((NextCondTerm)condTerm).getCondTerm();
+        }
+
+        setRelOp(((SingleCondTerm)condTerm).getCondFact(), startOfIfAddr, endOfIfAddr, 
+            orOpExists, andOpExists, prevRelOpAddr);
+        return ((SingleCondTerm)condTerm).getCondFact().obj.getKind();
+    }
+
+    public void visit(IfElseStatement ifElseStatement) {
+        Condition condition = ((RegularIfCondExpr)ifElseStatement.getIfCondExpr()).getCondition();
+        int startOfIfAddr = ifElseStatement.getIfCondExpr().obj.getKind();
+        int endOfIfAddr =  ifElseStatement.getOptionalElseStatement().obj.getKind();
+        Code.put2(endOfIfAddr - 2, Code.pc - endOfIfAddr + 3);
+
+        boolean orOpExists = false;
+        boolean andOpExists = false;
+
+        if (condition instanceof NextCondition) {
+            report_info("OR exists", ifElseStatement);
+            orOpExists = true;
+            CondTerm condTerm = ((NextCondition)condition).getCondTerm();
+            CondFact rightMostCondFact;
+            boolean isSingleCondTerm = false;
+
+            if (condTerm instanceof NextCondTerm) {
+                andOpExists = true;
+                rightMostCondFact = ((NextCondTerm)condTerm).getCondFact();
+                condTerm = ((NextCondTerm)condTerm).getCondTerm();
+            }
+            else {
+                isSingleCondTerm = true;
+                rightMostCondFact = ((SingleCondTerm)condTerm).getCondFact();
+            }
+
+            int relOpStartAddr = rightMostCondFact.obj.getKind();
+
+            // right most cond fact
+            if (rightMostCondFact instanceof SingleCondFact) {
+                Code.put2(relOpStartAddr, (Code.jcc + Code.eq) << 8);
+                Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
+            }
+            else {
+                int relopCode = getInverseRelopCode((FullCondFact)rightMostCondFact);
+                Code.put2(relOpStartAddr, (Code.jcc + relopCode) << 8);
+                Code.put2(relOpStartAddr + 1, endOfIfAddr - relOpStartAddr);
+            }
+
+            while (condTerm instanceof NextCondTerm) {
+                setRelOp(((NextCondTerm)condTerm).getCondFact(), startOfIfAddr, endOfIfAddr, 
+                    orOpExists, andOpExists, endOfIfAddr);
+                condTerm = ((NextCondTerm)condTerm).getCondTerm();
+            }
+
+            if (!isSingleCondTerm) {
+                setRelOp(((SingleCondTerm)condTerm).getCondFact(), startOfIfAddr, endOfIfAddr, 
+                    orOpExists, andOpExists, endOfIfAddr);
+            }
+
+            condition = ((NextCondition)condition).getCondition();
+            andOpExists = false;
+        }
+
+        while (condition instanceof NextCondition) {
+            handleCondTerm(((NextCondition)condition).getCondTerm(), startOfIfAddr,
+                endOfIfAddr, orOpExists);
+            condition = ((NextCondition)condition).getCondition();
+        }
+
+        handleCondTerm(((SingleCondition)condition).getCondTerm(), startOfIfAddr,
+            endOfIfAddr, orOpExists);
+    }
+
+    public void visit(RegularIfCondExpr ifCondExpr) {
+        report_info("if cond done biatch " + Code.pc, ifCondExpr);
+        ifCondExpr.obj = new Obj(Code.pc, "", null);
+    }
+
+    public void visit(NoElseStatement noElseStatement) {
+        noElseStatement.obj = new Obj(Code.pc, "", null);
+    }
+
+    public void visit(ElseStatement elseStatement) {
+        elseStatement.obj = elseStatement.getElseKeyword().obj;
+    }
+
+    public void visit(ElseKeyword elseKeyword) {
+        Code.putJump(0);
+        elseKeyword.obj = new Obj(Code.pc, "", null);
+    }
+
+
+    public void visit(NextCondition nextCondition) {
+
+    }
+
+    public void visit(SingleCondition singleCondition) {
+
+    }
+
+    public void visit(NextCondTerm nextCondTerm) {
+
+    }
+
+    public void visit(SingleCondTerm singleCondTerm) {
+
+    }
+
+    public void visit(FullCondFact fullCondFact) {
+        fullCondFact.obj = new Obj(Code.pc, fullCondFact.obj.getName(), fullCondFact.obj.getType());
+        Code.putFalseJump(Code.eq, 0); // filler code, to leave space for later
+    }
+
+    public void visit(SingleCondFact singleCondFact) {
+        Code.loadConst(0); // must compare to smth in case of a single boolean value on stack
+        singleCondFact.obj = new Obj(Code.pc, singleCondFact.obj.getName(), singleCondFact.obj.getType());
+        Code.putFalseJump(Code.eq, 0); // filler code, to leave space for later
     }
 
     public void visit(RegularExpr regularExpr) {}

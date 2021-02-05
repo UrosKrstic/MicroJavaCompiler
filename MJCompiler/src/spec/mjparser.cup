@@ -74,9 +74,8 @@ nonterminal StatementList, Statement, OptionalMinus,
         OptionalActParsWithBrackets, ActPars;
 
 /* Statement related nonterminals */
-nonterminal FullPrintStatement,
-        OptionalElseStatement, CaseList,
-        AssignStatementRecover, IfCondExpr,
+nonterminal FullPrintStatement, CaseList,
+        AssignStatementRecover,
         DoWhileStart, DoWhileEnd,
         BreakKeyword, ContinueKeyword,
         SwitchStart, SwitchEnd;
@@ -88,6 +87,7 @@ nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, ReadDesignator, Assi
 nonterminal rs.etf.pp1.symboltable.concepts.Obj DesignatorStatementOptions, FunctionCallStatement;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Condition, CondTerm, CondFact, ConditionExpr;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj OptionalElseStatement, ElseKeyword, IfCondExpr;
 
 precedence left ELSE;
 
@@ -232,8 +232,10 @@ ReadDesignator ::= (ReadDesignator) Designator;
 
 AssignDesignator ::= (AssignDesignator) Designator;
 
-OptionalElseStatement ::= (ElseStatement) ELSE Statement
+OptionalElseStatement ::= (ElseStatement) ElseKeyword Statement
     | (NoElseStatement);
+
+ElseKeyword ::= (ElseKeyword) ELSE;
 
 CaseList ::= (Case) CaseList CASE NUMCONST:numConst COLON StatementList
     | (NoCase);
