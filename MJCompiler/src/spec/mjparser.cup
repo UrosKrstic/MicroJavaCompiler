@@ -106,36 +106,36 @@ DeclEnd ::= (DeclEnd) LEFT_CURLY_BRACE;
 
 ConstDeclListWithErrorRecovery ::= (FullConstDeclListWithErrorRecovery) CONST Type ConstDeclList
     | (ErrorConstDeclWithErrorRecovery) CONST error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do SEMICOLON-a [1], linija " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of a constant declaration until ';', line " + lleft, null); :}
     ;
 
 ConstDeclList ::= (FullConstDeclWithSEMICOLON) ConstDecl SEMICOLON
     | (ErrorConstDeclWithSEMICOLON) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do SEMICOLON-a [2], linija " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of a constant declaration until ';', line " + lleft, null); :}
     | (ConstDeclListCOMMA) ConstDeclWithCOMMA ConstDeclList
     ;
 
 ConstDeclWithCOMMA ::= (FullConstDeclWithCOMMA) ConstDecl COMMA
     | (ErrorConstDeclWithCOMMA) error COMMA:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije const globalne promenljive do COMMA, linija " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of a constant declaration until ',', line " + lleft, null); :}
     ;
 
 ConstDecl ::= (ConstDecl) IDENT:constName ASSIGN ConstValue;
 
 GlobalVarDeclListWithErrorRecovery ::= (FullGlobalVarDeclList) Type GlobalVarDecl
     | (ErrorGlobalVarDeclList) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar deklaracije globalne promenljive do SEMICOLON-a [1], linija " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of a global variable declaration until ';', line " + lleft, null); :}
     ;
 
 GlobalVarDecl ::= (FullGlobalVarDecl) VarDecl SEMICOLON
     | (ErrorGlobalVarDecl) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar deklaracije globalne promenljive do SEMICOLON-a [2], linija " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of a global variable declaration until ';', line " + lleft, null); :}
     | (FullGlobalVarDeclWithCOMMA) GlobalVarDeclWithCOMMA GlobalVarDecl
     ;
 
 GlobalVarDeclWithCOMMA ::= (NextGlobalVarDeclWithCOMMA) VarDecl COMMA
     | (ErrorGlobalVarDeclWithCOMMA) error COMMA:l
-    {: parser.report_error("Izvrsen oporavak unutar deklaracije globalne promenljive do COMMA-e, linija " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of a global variable declaration until ',', line " + lleft, null); :}
     ;
 
 ClassDecl ::= (ClassDecl) CLASS ClassName OptionalExtendedClassLBrace ClassOptionalVarDeclList
@@ -148,12 +148,12 @@ ClassOptionalVarDeclList ::= (FullClassVarDecl) ClassOptionalVarDeclList ClassVa
 
 OptionalExtendedClassLBrace ::= (ExtendedClass) EXTENDS Type LEFT_CURLY_BRACE
     | (ErrorExtendedClass) error LEFT_CURLY_BRACE:l
-    {: parser.report_error("Izvrsen oporavak nekorektnog prosirenja klase, liniji " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of an incorrect class extends clause, line " + lleft, null); :}
     | (NoExtendedClass) LEFT_CURLY_BRACE;
 
 ClassVarDecls ::= (RegularClassVarDecls) Type VarDeclList SEMICOLON
     | (ErrorClassVarDecls) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije polja klase, liniji " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of a class field definition, line " + lleft, null); :}
     ;
 
 MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) MethodDeclStart MethodDeclList RIGHT_CURLY_BRACE
@@ -182,12 +182,12 @@ OptionalFormPars ::= (FullFormPars) FormsPars
 
 FormsPars ::= (FormParamWithPAREN) Type VarDecl FormArgsEnd
     | (ErrorFormParamWithPAREN) error RIGHT_PARENTHESIS:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije formalnih parametara metode do ')', linija " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of formal parameter definition until ')', line " + lleft, null); :}
     | (InnerFormParamWithCOMMA) FormParamWithCOMMA FormsPars;
 
 FormParamWithCOMMA ::= (FullFormParamWithCOMMA) Type VarDecl COMMA
     | (ErrorFormParamWithCOMMA) error COMMA:l
-    {: parser.report_error("Izvrsen oporavak unutar definicije formalnih parametara metode do ',', linija " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of formal parameter definition until ',', line " + lleft, null); :}
     ;
 
 StatementList ::= (MethodStatement) StatementList Statement
@@ -217,7 +217,7 @@ ContinueKeyword ::= (ContinueKeyword) CONTINUE;
 
 IfCondExpr ::= (RegularIfCondExpr) LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS
     | (ErrorIfCondExpr) error RIGHT_PARENTHESIS:l
-    {: parser.report_error("Izvrsen oporavak od nekorektnog logickog iskaza unutar if-a, liniji " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of if's conditional statement, line " + lleft, null); :}
     ;
 
 DesignatorStatementOptions ::= (AssignStatementWithErrRecovery) AssignStatementRecover
@@ -227,7 +227,7 @@ DesignatorStatementOptions ::= (AssignStatementWithErrRecovery) AssignStatementR
 
 AssignStatementRecover ::= (AssignExpr) AssignDesignator Assignop Expr SEMICOLON
     | (AssignExprError) error SEMICOLON:l
-    {: parser.report_error("Izvrsen oporavak od nekorektnog iskaza dodele, liniji " + lleft, null); :}
+    {: parser.report_error("Error recovery inside of an assignment, line " + lleft, null); :}
     ;
 
 ReadDesignator ::= (ReadDesignator) Designator;
