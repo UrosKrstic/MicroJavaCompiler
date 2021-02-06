@@ -28,7 +28,7 @@ public class CodeGenerator extends VisitorAdaptor {
     private void createVTF() {
         int staticDataMemoryCurrLoc = Code.dataSize;
         for (Obj classObj : definedClasses) {
-            report_info("[VTF]" + stringifyObjNode(classObj), null);
+            //report_info("[VTF]" + stringifyObjNode(classObj), null);
             vtfPointers.put(classObj.getType(), staticDataMemoryCurrLoc);
             Iterator<Obj> objIter =  classObj.getType().getMembers().iterator();
             int fieldCount = classObj.getType().getNumberOfFields();
@@ -64,7 +64,7 @@ public class CodeGenerator extends VisitorAdaptor {
 
     private void createBuiltinFunctions() {
         Obj chrMethObj = MySymbolTable.find("chr");
-        report_info("[CHR]" + stringifyObjNode(chrMethObj), null);
+        // report_info("[CHR]" + stringifyObjNode(chrMethObj), null);
         chrMethObj.setAdr(Code.pc);
         Code.put(Code.enter);
         Code.put(1);
@@ -77,7 +77,7 @@ public class CodeGenerator extends VisitorAdaptor {
 
 
         Obj ordMethObj = MySymbolTable.find("ord");
-        report_info("[ORD]" + stringifyObjNode(ordMethObj), null);
+        // report_info("[ORD]" + stringifyObjNode(ordMethObj), null);
         ordMethObj.setAdr(Code.pc);
         Code.put(Code.enter);
         Code.put(1);
@@ -90,7 +90,7 @@ public class CodeGenerator extends VisitorAdaptor {
 
 
         Obj lenMethObj = MySymbolTable.find("len");
-        report_info("[LEN]" + stringifyObjNode(lenMethObj), null);
+        // report_info("[LEN]" + stringifyObjNode(lenMethObj), null);
         lenMethObj.setAdr(Code.pc);
         Code.put(Code.enter);
         Code.put(1);
@@ -181,15 +181,15 @@ public class CodeGenerator extends VisitorAdaptor {
             Code.put2(functionCallStatement.obj.getAdr() - oldPc);
         }
         else {
-            // traverse once more to reload the object of class
-            functionCallStatement.getDesignator().traverseBottomUp(new CodeGenerator());
-
             //reload manually in case of single designator
             if (functionCallStatement.getDesignator() instanceof SingleDesignator) {
                 Code.put(Code.load);
                 Code.put(0);
             }
-
+            else {
+                // traverse once more to reload the object of class
+                functionCallStatement.getDesignator().traverseBottomUp(new CodeGenerator());
+            }
             // add VTF pointer of current class object
             Code.put(Code.getfield);
             Code.put2(0);
@@ -239,11 +239,22 @@ public class CodeGenerator extends VisitorAdaptor {
         }
     }
 
-    public void visit(PostIncrement postIncrement) {
-        postIncrement.getAssignDesignator().getDesignator().traverseBottomUp(new CodeGenerator());
+    public void visit(ReadStatement readStatement) {
+        if (!readStatement.getReadDesignator().getDesignator().obj.getType().equals(MySymbolTable.charType)) {
+            Code.put(Code.read);
+        }
+        else {
+            Code.put(Code.bread);
+        }
+        Code.store(readStatement.getReadDesignator().getDesignator().obj);
+    }
 
+    public void visit(PostIncrement postIncrement) {
         if (postIncrement.getAssignDesignator().getDesignator() instanceof SingleDesignator) {
             Code.load(postIncrement.getAssignDesignator().obj);
+        }
+        else {
+            postIncrement.getAssignDesignator().getDesignator().traverseBottomUp(new CodeGenerator());
         }
 
         Code.loadConst(1);
@@ -252,10 +263,11 @@ public class CodeGenerator extends VisitorAdaptor {
     }
 
     public void visit(PostDecrement postDecrement) {
-        postDecrement.getAssignDesignator().getDesignator().traverseBottomUp(new CodeGenerator());
-
         if (postDecrement.getAssignDesignator().getDesignator() instanceof SingleDesignator) {
             Code.load(postDecrement.getAssignDesignator().obj);
+        }
+        else {
+            postDecrement.getAssignDesignator().getDesignator().traverseBottomUp(new CodeGenerator());
         }
 
         Code.loadConst(1);
@@ -436,7 +448,9 @@ public class CodeGenerator extends VisitorAdaptor {
 
     private Stack<Integer> doWhileStartAddrs = new Stack<>();
     private Stack<Integer> switchStartAddrs = new Stack<>();
-    private Map<Integer, LinkedList<Integer>> breaksInStatements = new HashMap<>();
+    private Map<Integer, LinkedList<Integer>> breaksInSwitches = new HashMap<>();
+    private Map<Integer, LinkedList<Integer>> breaksInDoWhiles = new HashMap<>();
+    private Map<Integer, LinkedList<Integer>> continuesInDoWhiles = new HashMap<>();
     private Stack<Boolean> insideDoWhile = new Stack<>();
 
     public void visit(DoWhileStatement doWhileStatement) {
@@ -446,20 +460,32 @@ public class CodeGenerator extends VisitorAdaptor {
         int endOfWhileAddr = Code.pc;
 
         // adding the end of do-while address to all inner break statements
-        LinkedList<Integer> breakAddrs = breaksInStatements.get(startOfWhileAddr);
+        LinkedList<Integer> breakAddrs = breaksInDoWhiles.get(startOfWhileAddr);
         for (int breakAddr : breakAddrs) {
             Code.put2(breakAddr + 1, endOfWhileAddr - breakAddr);
         }
-        breaksInStatements.remove(startOfWhileAddr);
+        breaksInDoWhiles.remove(startOfWhileAddr);
+
+        LinkedList<Integer> continueAddrs = continuesInDoWhiles.get(startOfWhileAddr);
+        int doWhileConditionStartAddr = doWhileStatement.getDoWhileCondition().obj.getKind();
+        for (int continueAddr : continueAddrs) {
+            Code.put2(continueAddr + 1, doWhileConditionStartAddr - continueAddr);
+        }
+        continuesInDoWhiles.remove(startOfWhileAddr);
 
         handleConditionalStatement(doWhileStatement.getCondition(), startOfWhileAddr, endOfWhileAddr);
     }
 
     public void visit(DoWhileStart doWhileStart) {
         doWhileStartAddrs.push(Code.pc);
-        breaksInStatements.put(Code.pc, new LinkedList<Integer>());
+        breaksInDoWhiles.put(Code.pc, new LinkedList<Integer>());
+        continuesInDoWhiles.put(Code.pc,new LinkedList<Integer>());
         insideDoWhile.push(true);
         // report_info("pc of start do-while: " + Code.pc, doWhileStart);
+    }
+
+    public void visit(DoWhileCondition doWhileCondition) {
+        doWhileCondition.obj = new Obj(Code.pc, "", null);
     }
 
     public void visit(SwitchStatement switchStatement) {
@@ -497,11 +523,11 @@ public class CodeGenerator extends VisitorAdaptor {
         }
 
         // adding the end of switch address to all inner break statements
-        LinkedList<Integer> breakAddrs = breaksInStatements.get(startOfSwitchAddr);
+        LinkedList<Integer> breakAddrs = breaksInSwitches.get(startOfSwitchAddr);
         for (int breakAddr : breakAddrs) {
             Code.put2(breakAddr + 1, endOfSwitchAddr - breakAddr);
         }
-        breaksInStatements.remove(startOfSwitchAddr);
+        breaksInSwitches.remove(startOfSwitchAddr);
     }
 
     public void visit(CaseLabel caseLabel) {
@@ -519,22 +545,23 @@ public class CodeGenerator extends VisitorAdaptor {
 
     public void visit(SwitchStart switchStart) {
         switchStartAddrs.push(Code.pc);
-        breaksInStatements.put(Code.pc, new LinkedList<Integer>());
+        breaksInSwitches.put(Code.pc, new LinkedList<Integer>());
         insideDoWhile.push(false);
     }
 
     public void visit(BreakStatement breakStatement) {
         if (insideDoWhile.peek()) {
-            breaksInStatements.get(doWhileStartAddrs.peek()).add(Code.pc);
+            breaksInDoWhiles.get(doWhileStartAddrs.peek()).add(Code.pc);
         }
         else {
-            breaksInStatements.get(switchStartAddrs.peek()).add(Code.pc);
+            breaksInSwitches.get(switchStartAddrs.peek()).add(Code.pc);
         }
         Code.putJump(0);
     }
 
     public void visit(ContinueStatement continueStatement) {
-        Code.putJump(doWhileStartAddrs.peek());
+        continuesInDoWhiles.get(doWhileStartAddrs.peek()).add(Code.pc);
+        Code.putJump(0);
     }
 
     public void visit(IfElseStatement ifElseStatement) {
@@ -668,6 +695,9 @@ public class CodeGenerator extends VisitorAdaptor {
                 Code.put(Code.load);
                 Code.put(0);
             }
+        }
+        if (singleDesignator.obj.getKind() == Obj.Fld) {
+            Code.put(Code.load_n);
         }
     }
 

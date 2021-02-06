@@ -89,7 +89,7 @@ nonterminal rs.etf.pp1.symboltable.concepts.Obj Condition, CondTerm, CondFact, C
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj OptionalElseStatement, ElseKeyword, IfCondExpr;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj TernaryFirstExpr, TernarySecondExprStart, TernaryThirdExprStart;
-nonterminal rs.etf.pp1.symboltable.concepts.Obj CaseLabel;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj CaseLabel, DoWhileCondition;
 precedence left ELSE;
 
 Program ::= (Program) PROGRAM ProgName:p DeclList
@@ -195,7 +195,7 @@ StatementList ::= (MethodStatement) StatementList Statement
 
 Statement ::= (DesignatorStatement) DesignatorStatementOptions
     | (IfElseStatement) IF IfCondExpr Statement OptionalElseStatement
-    | (DoWhileStatement) DoWhileStart Statement WHILE LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS DoWhileEnd
+    | (DoWhileStatement) DoWhileStart Statement DoWhileCondition LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS DoWhileEnd
     | (SwitchStatement) SwitchStart LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList SwitchEnd
     | (BreakStatement) BreakKeyword SEMICOLON
     | (ContinueStatement) ContinueKeyword SEMICOLON
@@ -207,6 +207,7 @@ Statement ::= (DesignatorStatement) DesignatorStatementOptions
 
 DoWhileStart ::= (DoWhileStart) DO;
 DoWhileEnd ::= (DoWhileEnd) SEMICOLON;
+DoWhileCondition ::= (DoWhileCondition) WHILE;
 
 SwitchStart ::= (SwitchStart) SWITCH;
 SwitchEnd ::= (SwitchEnd) RIGHT_CURLY_BRACE;

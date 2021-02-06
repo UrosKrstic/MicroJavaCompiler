@@ -72,6 +72,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     public boolean checkForMultipleDeclarations(String symbolName, int level, SyntaxNode info, String messageStart) {
         Obj objNode = MySymbolTable.find(symbolName);
         if (objNode != MySymbolTable.noObj && objNode.getLevel() == level) {
+            if (objNode.getKind() == Obj.Fld && currentMethod != null && inClassDefinition)
+                return false;
             report_error(messageStart + " '" + symbolName + "' already declared", info);
             return true;
         }
@@ -127,6 +129,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         boolean isArray = varDecl.getOptionalArrayBrackets() instanceof ArrayBrackets;
         Obj objNode = null;
         int objKind = inClassDefinition && currentMethod == null ? Obj.Fld : Obj.Var;
+        report_info("[objkind] " + objKind + ", [objname] " + varDecl.getVarName(), varDecl);
         if (isArray) { // is array
             Struct arrStruct = tableOfArrayStructs.get(currentType);
             if (arrStruct == null) {
@@ -294,6 +297,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     public void visit(MethodBodyStart methodBodyStart) {
         MySymbolTable.chainLocalSymbols(currentMethod);
+        report_info("form param count: " + currentMethodFormParams.size(), methodBodyStart);
         currentMethod.setLevel(currentMethodFormParams.size());
         if (!inClassDefinition && currentMethod.getName().equals("main")) {
             if (currentMethodFormParams.size() > 0) {
@@ -545,7 +549,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         readDesignator.obj = readDesignator.getDesignator().obj;
 
         if (readDesignator.getDesignator().obj.getKind() != Obj.Var &&
-        readDesignator.getDesignator().obj.getKind() != Obj.Fld) {
+            readDesignator.getDesignator().obj.getKind() != Obj.Fld && 
+            readDesignator.getDesignator().obj.getKind() != Obj.Elem) {
             report_error("Designator in read statement must be a variable, array element or class field", 
                 readDesignator);
         }
@@ -748,6 +753,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                     }
                     actualArgs.add(((SingleActPar)actPars).getExpr().obj);
                 }
+
+                report_info("fac: " + formalArgCount + ", aac: " + actualArgs.size(), funcCallStatement);
 
                 if (actualArgs.size() != formalArgCount) {
                     report_error("Incorrect number of function arguments in function call of '" +
