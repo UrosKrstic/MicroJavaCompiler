@@ -69,6 +69,12 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         return visitor.getOutput();
     }
 
+    public String stringifyStructNode(Struct structNode) {
+        MyDumpSymbolTableVisitor visitor = new MyDumpSymbolTableVisitor();
+        structNode.accept(visitor);
+        return visitor.getOutput();
+    }
+
     public boolean checkForMultipleDeclarations(String symbolName, int level, SyntaxNode info, String messageStart) {
         Obj objNode = MySymbolTable.find(symbolName);
         if (objNode != MySymbolTable.noObj && objNode.getLevel() == level) {
@@ -81,25 +87,25 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     private boolean isAssignable(Struct src, Struct dest) {
-        report_info("LETS GO -1", null);
+        // report_info("LETS GO -1", null);
         if (src.getKind() != Struct.Class || dest.getKind() != Struct.Class) {
             return src.assignableTo(dest);
         }
-        report_info("LETS GO 0", null);
+        // report_info("LETS GO 0", null);
         if (src.assignableTo(dest))
             return true;
 
         boolean isAssignable = false;
         Struct parentStruct = src.getElemType();
-        report_info("LETS GO 1", null);
+        // report_info("LETS GO 1", null);
         while (parentStruct != null) {
-            report_info("LETS GO 2", null);
+            // report_info("LETS GO 2", null);
             if (parentStruct.assignableTo(dest)) {
-                report_info("LETS GO 3", null);
+                // report_info("LETS GO 3", null);
                 isAssignable = true;
                 break;
             }
-            report_info("LETS GO 4", null);
+            // report_info("LETS GO 4", null);
             parentStruct = parentStruct.getElemType();
         }
         return isAssignable;
@@ -129,7 +135,6 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         boolean isArray = varDecl.getOptionalArrayBrackets() instanceof ArrayBrackets;
         Obj objNode = null;
         int objKind = inClassDefinition && currentMethod == null ? Obj.Fld : Obj.Var;
-        report_info("[objkind] " + objKind + ", [objname] " + varDecl.getVarName(), varDecl);
         if (isArray) { // is array
             Struct arrStruct = tableOfArrayStructs.get(currentType);
             if (arrStruct == null) {
@@ -137,18 +142,18 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                 tableOfArrayStructs.put(currentType, arrStruct);
             }
             objNode = MySymbolTable.insert(objKind, varDecl.getVarName(), arrStruct);
-            report_info("Declared array variable '" + varDecl.getVarName() + "', symbol: " + "["
-                    + stringifyObjNode(objNode) + "]", varDecl);
+            // report_info("Declared array variable '" + varDecl.getVarName() + "', symbol: " + "["
+            //         + stringifyObjNode(objNode) + "]", varDecl);
         }
         else if (currentType.getKind() == Struct.Class) {
             objNode = MySymbolTable.insert(objKind, varDecl.getVarName(), currentType);
-            report_info("Declared object '" + varDecl.getVarName() + "' of a class, symbol: " +
-                "[" + stringifyObjNode(objNode) + "]", varDecl);
+            // report_info("Declared object '" + varDecl.getVarName() + "' of a class, symbol: " +
+            //     "[" + stringifyObjNode(objNode) + "]", varDecl);
         }
         else { // is regular variable
             objNode = MySymbolTable.insert(objKind, varDecl.getVarName(), currentType);
-            report_info("Declared variable '" + varDecl.getVarName() + "', symbol: " + "[" + stringifyObjNode(objNode)
-                    + "]", varDecl);
+            // report_info("Declared variable '" + varDecl.getVarName() + "', symbol: " + "[" + stringifyObjNode(objNode)
+            //         + "]", varDecl);
         }
         if (isFormParamDecl && objNode != null) {
             currentMethodFormParams.put(objNode.getName(), objNode);
@@ -180,8 +185,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                     constVal = ((NumberConst) constDecl.getConstValue()).getNumConst();
                 }
                 objNode.setAdr(constVal);
-                report_info("Declared constant '" + constDecl.getConstName() + "', symbol: " + "["
-                        + stringifyObjNode(objNode) + "]", constDecl);
+                // report_info("Declared constant '" + constDecl.getConstName() + "', symbol: " + "["
+                //         + stringifyObjNode(objNode) + "]", constDecl);
             } else {
                 report_error("Invalid value for given type '" + currentTypeName + "' in constant declaration ",
                         constDecl);
@@ -235,12 +240,12 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         parentClassMemberIter = parentClassMembers.iterator();
 
         // skipping VTP
-        report_info("Parent class field count: " + stringifyObjNode(new Obj(Obj.Var, "ejl", parentClassType)), extendedClass);
+        // report_info("Parent class field count: " + stringifyObjNode(new Obj(Obj.Var, "ejl", parentClassType)), extendedClass);
         parentClassMemberIter.next();
 
         // inserting all fields from parent class
         for (int i = 0; i < parentClassFieldCnt; i++) {
-            report_info("Parent field number: " + i, extendedClass);
+            // report_info("Parent field number: " + i, extendedClass);
             MySymbolTable.currentScope.addToLocals(parentClassMemberIter.next());
         }
     }
@@ -292,12 +297,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             Obj objThis = MySymbolTable.insert(Obj.Var, "this", currentClass.getType());
             currentMethodFormParams.put("this", objThis);
         }
-        report_info("Function definition started: " + methodReturnTypeAndName.getMethodName(), methodReturnTypeAndName);
+        // report_info("Function definition started: " + methodReturnTypeAndName.getMethodName(), methodReturnTypeAndName);
     }
 
     public void visit(MethodBodyStart methodBodyStart) {
         MySymbolTable.chainLocalSymbols(currentMethod);
-        report_info("form param count: " + currentMethodFormParams.size(), methodBodyStart);
         currentMethod.setLevel(currentMethodFormParams.size());
         if (!inClassDefinition && currentMethod.getName().equals("main")) {
             if (currentMethodFormParams.size() > 0) {
@@ -310,7 +314,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         //MySymbolTable.chainLocalSymbols(currentMethod);
         MySymbolTable.closeScope();
         //currentMethod.setLevel(currentMethodFormParams.size());
-        report_info("Function definition ended: " + stringifyObjNode(currentMethod), methodDecl);
+        // report_info("Function definition ended: " + stringifyObjNode(currentMethod), methodDecl);
         currentMethod = null;
         currentMethodFormParams.clear();
     }
@@ -322,7 +326,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             report_error("Designator in assign statement must be a variable, array element or class field", 
                 assignExpr);
         }
-        report_info("WELL FINE", assignExpr);
+        // report_info("WELL FINE", assignExpr);
         if (!isAssignable(assignExpr.getExpr().obj.getType(), assignExpr.getAssignDesignator().obj.getType())) {
             report_error("Types must be assign-compatible in assign expression", assignExpr);
         }
@@ -573,7 +577,6 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.charType);
             constVal = ((CharConst) constFactor.getConstValue()).getCharConst();
         } else {
-            report_info("Lets go int bby", constFactor);
             constFactor.obj = new Obj(Obj.Con, "constant", MySymbolTable.intType);
             constVal = ((NumberConst) constFactor.getConstValue()).getNumConst();
         }
@@ -585,18 +588,15 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (newOperatorFactor.getType().struct.getKind() != Struct.Class) {
             report_error("Invalid type in operator 'new', type must be a class", newOperatorFactor);
         }
-        report_info("LETS GOOOOOO", newOperatorFactor);
         newOperatorFactor.obj = new Obj(Obj.Var, "newref", newOperatorFactor.getType().struct);
-        report_info(stringifyObjNode(newOperatorFactor.obj), newOperatorFactor);
+        report_info("Object creation for class: " + stringifyStructNode(newOperatorFactor.getType().struct), newOperatorFactor);
     }
 
     public void visit(NewOperatorFactorWithBrackets newOperatorFactor) {
         if (newOperatorFactor.getExpr().obj.getType().getKind() != Struct.Int) {
             report_error("Invalid type in brackets of operator 'new', type must be int", newOperatorFactor);
         }
-        newOperatorFactor.obj = new Obj(Obj.Var, "newrefArr", tableOfArrayStructs.get(newOperatorFactor.getType().struct)); 
-        report_info("[new operator arr] " + newOperatorFactor.obj.getType().getKind() +
-        newOperatorFactor.obj.getType().getElemType().getKind(), newOperatorFactor);
+        newOperatorFactor.obj = new Obj(Obj.Var, "newrefArr", tableOfArrayStructs.get(newOperatorFactor.getType().struct));
     }
 
     public void visit(ExprFactor exprFactor) {
@@ -754,8 +754,6 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                     actualArgs.add(((SingleActPar)actPars).getExpr().obj);
                 }
 
-                report_info("fac: " + formalArgCount + ", aac: " + actualArgs.size(), funcCallStatement);
-
                 if (actualArgs.size() != formalArgCount) {
                     report_error("Incorrect number of function arguments in function call of '" +
                     currentDesignatorObj.getName() + "'", funcCallStatement);
@@ -813,7 +811,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
                     }
                 }
             } else if (currentDesignatorObj.getKind() == Obj.Con) {
-                report_info("Usage of symbolic constant'" + currentDesignatorObj.getName() + "', objNode: ["
+                report_info("Usage of symbolic constant '" + currentDesignatorObj.getName() + "', objNode: ["
                         + stringifyObjNode(currentDesignatorObj) + "]", info);
             }
             else if (currentDesignatorObj.getKind() == Obj.Fld) {
@@ -838,5 +836,53 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             }
         }
         type.struct = currentType;
+    }
+
+    public void visit(ErrorClassVarDecls errorClassVarDecls) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorConstDeclWithCOMMA errorConstDeclWithCOMMA) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorConstDeclWithErrorRecovery errorConstDeclWithErrorRecovery) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorConstDeclWithSEMICOLON errorConstDeclWithSEMICOLON) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorExtendedClass errorExtendedClass) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorFormParamWithCOMMA errorFormParamWithCOMMA) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorFormParamWithPAREN errorFormParamWithPAREN) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorGlobalVarDecl errorGlobalVarDecl) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorGlobalVarDeclList errorGlobalVarDeclList) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorGlobalVarDeclWithCOMMA errorGlobalVarDeclWithCOMMA) {
+        errorDetected = true;
+    }
+
+    public void visit(ErrorIfCondExpr errorIfCondExpr) {
+        errorDetected = true;
+    }
+
+    public void visit(AssignExprError assignExprError) {
+        errorDetected = true;
     }
 }
