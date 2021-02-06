@@ -470,12 +470,54 @@ public class CodeGenerator extends VisitorAdaptor {
         insideDoWhile.pop();
         int endOfSwitchAddr = Code.pc;
 
+        CaseList currentCase = switchStatement.getCaseList();
+        int prevCaseStartAddr = 0;
+
+        if (currentCase instanceof Case) { // last
+            int caseJmpAddr = ((Case)currentCase).getCaseLabel().obj.getAdr();
+            prevCaseStartAddr = ((Case)currentCase).getCaseLabel().obj.getKind();
+            Code.put2(caseJmpAddr + 1, endOfSwitchAddr - caseJmpAddr);
+            if (((Case)currentCase).getCaseList() instanceof NoCase) { // if is first, dont use the jmp
+                Code.put2(prevCaseStartAddr - 2, 3);
+            }
+            currentCase = ((Case)currentCase).getCaseList();
+        }
+        else {
+            // no cases, the expr from switch won't be used
+            // so it must be removed from estack
+            Code.put(Code.pop);
+        }
+
+        while (currentCase instanceof Case) {
+            int caseJmpAddr = ((Case)currentCase).getCaseLabel().obj.getAdr();
+            Code.put2(caseJmpAddr + 1, prevCaseStartAddr - caseJmpAddr);
+            prevCaseStartAddr = ((Case)currentCase).getCaseLabel().obj.getKind();
+
+            if (((Case)currentCase).getCaseList() instanceof NoCase) { // if is first, dont use the jmp
+                Code.put2(prevCaseStartAddr - 2, 3);
+            }
+            currentCase = ((Case)currentCase).getCaseList();
+        }
+
         // adding the end of switch address to all inner break statements
         LinkedList<Integer> breakAddrs = breaksInStatements.get(startOfSwitchAddr);
         for (int breakAddr : breakAddrs) {
             Code.put2(breakAddr + 1, endOfSwitchAddr - breakAddr);
         }
         breaksInStatements.remove(startOfSwitchAddr);
+    }
+
+    public void visit(CaseLabel caseLabel) {
+        int jmpAddr = Code.pc;
+        Code.putJump(0);
+        caseLabel.obj = new Obj(Code.pc, "", null);
+        Code.put(Code.dup);
+        Code.loadConst(caseLabel.getNumConst());
+        caseLabel.obj.setAdr(Code.pc);
+        Code.put(Code.jcc + Code.ne);
+        Code.put2(0);
+        Code.put(Code.pop);
+        Code.put2(jmpAddr + 1, Code.pc - jmpAddr);
     }
 
     public void visit(SwitchStart switchStart) {

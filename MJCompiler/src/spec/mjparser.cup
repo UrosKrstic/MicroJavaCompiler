@@ -88,7 +88,8 @@ nonterminal rs.etf.pp1.symboltable.concepts.Obj DesignatorStatementOptions, Func
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Condition, CondTerm, CondFact, ConditionExpr;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj OptionalElseStatement, ElseKeyword, IfCondExpr;
- nonterminal rs.etf.pp1.symboltable.concepts.Obj TernaryFirstExpr, TernarySecondExprStart, TernaryThirdExprStart;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj TernaryFirstExpr, TernarySecondExprStart, TernaryThirdExprStart;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj CaseLabel;
 precedence left ELSE;
 
 Program ::= (Program) PROGRAM ProgName:p DeclList
@@ -237,8 +238,10 @@ OptionalElseStatement ::= (ElseStatement) ElseKeyword Statement
 
 ElseKeyword ::= (ElseKeyword) ELSE;
 
-CaseList ::= (Case) CaseList CASE NUMCONST:numConst COLON StatementList
+CaseList ::= (Case) CaseList CASE CaseLabel COLON StatementList
     | (NoCase);
+
+CaseLabel ::= (CaseLabel) NUMCONST:numConst;
 
 FullPrintStatement ::= (SimplePrintStatement) PRINT LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
     | (ParameterizedPrintStatement) PRINT LEFT_PARENTHESIS Expr COMMA NUMCONST:printWidth RIGHT_PARENTHESIS;

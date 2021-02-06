@@ -363,11 +363,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
         CaseList currentCase = switchStatement.getCaseList();
         while (currentCase instanceof Case) {
-            if (usedCases.contains(((Case)currentCase).getNumConst())) {
+            if (usedCases.contains(((Case)currentCase).getCaseLabel().getNumConst())) {
                 report_error("Multiple case brances cannot have the same number constant", ((Case)currentCase));
             }
             else {
-                usedCases.add(((Case)currentCase).getNumConst());
+                usedCases.add(((Case)currentCase).getCaseLabel().getNumConst());
             }
             currentCase = ((Case)currentCase).getCaseList();
         }
