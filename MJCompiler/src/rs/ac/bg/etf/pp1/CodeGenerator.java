@@ -132,8 +132,8 @@ public class CodeGenerator extends VisitorAdaptor {
 
     public void visit(MethodReturnTypeAndName methodReturnTypeAndName) {
         methodReturnTypeAndName.obj.setAdr(Code.pc);
-        report_info("[Method Decl] " + stringifyObjNode(methodReturnTypeAndName.obj),
-            methodReturnTypeAndName);
+        // report_info("[Method Decl] " + stringifyObjNode(methodReturnTypeAndName.obj),
+        //    methodReturnTypeAndName);
 
         if ("main".equals(methodReturnTypeAndName.getMethodName())) {
             mainPc = Code.pc;
@@ -142,7 +142,7 @@ public class CodeGenerator extends VisitorAdaptor {
 
         int formalParamCount = methodReturnTypeAndName.obj.getLevel();
         int localVarCount = methodReturnTypeAndName.obj.getLocalSymbols().size() - formalParamCount;
-        report_info("[Method definition] fpcnt: " + formalParamCount + ", lvcnt: " + localVarCount, methodReturnTypeAndName);
+        // report_info("[Method definition] fpcnt: " + formalParamCount + ", lvcnt: " + localVarCount, methodReturnTypeAndName);
 
         Code.put(Code.enter);
         Code.put(formalParamCount);
