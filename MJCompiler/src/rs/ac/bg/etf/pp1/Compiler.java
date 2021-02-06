@@ -47,6 +47,8 @@ public class Compiler {
                 logger.error("Syntax Error exiting program");
                 return;
             }
+
+            logger.info("==========================ABSTRACT SYNTAX TREE==============================");
             logger.info(program.toString(""));
 
             logger.info("==========================SEMANTIC ANALYSIS==============================");
