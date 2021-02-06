@@ -1,0 +1,38 @@
+program MJ
+
+class K {
+    {
+        int a() {
+            return 0;
+        }
+        int b(int c) {
+            return a() * 2;
+        }
+    }
+}
+class L extends K {
+    {
+        int a() {
+            return 1;
+        }
+    }
+}
+
+class S extends K {
+    {
+        int a() {
+            return 2;
+        }
+    }
+}
+
+K l1;
+K l2;
+{
+    void main() {
+        l1 = new L;
+        print(l1.b(1));
+        l2 = new S;
+        print(l2.b(1));
+    }
+}

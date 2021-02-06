@@ -1,0 +1,82 @@
+program MJ
+    int x;
+    const bool isTrue = false;
+    const int N = 5, Pi = 3;
+    class Krug {
+        int r;
+        {
+            int O() {
+                return 2 * r * Pi;
+            }
+            int P() {
+                return r * r * Pi;
+            }
+        }
+    }
+    Krug krugovi[];
+    {
+        void main() int a[], i, j; bool lol; char c; {
+            x = 0;
+            // a = null;
+            // if (x != 1 || x == 1 && isTrue && x > 0 || a == null) {
+            //     print(1);
+            // }
+            // else {
+            //     print(2);
+            // }
+            //if (x != 1 && isTrue) {
+            //    print(1);
+            //}
+            //i = 65;
+            //a = new int[3];
+            //c = 'B';
+            //read(i);
+            //read(c);
+            krugovi = new Krug[N];
+            print('1');
+            do {
+                krugovi[x] = new Krug;
+                krugovi[x].r = x + 1;
+                x++;
+            } while (x < N);
+            x = 0;
+            print('2');
+            do {
+                print('O', 2);
+                print(':');
+                print(krugovi[x].O(), 1);
+                print('P', 2);
+                print(':');
+                print(krugovi[x].P(), 1);
+                x++;
+            } while (x < N);
+            //print(len(a));
+            //print(i);
+            //print(chr(i));
+            //print(c);
+            //print(ord(c));
+            //switch (i) {
+            //    case 0:
+            //        print(0);
+            //    case 1:
+            //        print(1);
+            //    case 2:
+            //        print(2);
+            //}
+            //j = N;
+            //lol = false;
+            //i = lol ? 1 : 0;
+            //print(i);
+            //do {
+            //    print(i);
+            //    print(j);
+            //    i++;
+            //    j--;
+            //    do {
+            //        print(N + i);
+            //        if (N + i >= 5) break;
+            //    } while(i < N / 2);
+            //    if (i == 2) break;
+            //} while (i < N && lol);
+        }
+    }
