@@ -70,8 +70,7 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put(1);
         Code.put(1);
 
-        Code.put(Code.load);
-        Code.put(0);
+        Code.put(Code.load_n);
 
         Code.put(Code.exit);
         Code.put(Code.return_);
@@ -84,8 +83,7 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put(1);
         Code.put(1);
 
-        Code.put(Code.load);
-        Code.put(0);
+        Code.put(Code.load_n);
 
         Code.put(Code.exit);
         Code.put(Code.return_);
@@ -98,8 +96,7 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put(1);
         Code.put(1);
 
-        Code.put(Code.load);
-        Code.put(0);
+        Code.put(Code.load_n);
         Code.put(Code.arraylength);
 
         Code.put(Code.exit);
@@ -121,7 +118,7 @@ public class CodeGenerator extends VisitorAdaptor {
     }
 
     public void visit(ProgName progName) {
-        // createBuiltinFunctions();
+        createBuiltinFunctions();
     }
 
     public void visit(ClassName className) {
