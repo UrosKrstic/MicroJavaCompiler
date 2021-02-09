@@ -14,17 +14,17 @@ parser code {:
     }
 
     public void syntax_error(Symbol cur_token) {
-        report_error("\nSintaksna greska", cur_token);
+        report_error("\nSyntax error", cur_token);
     }
 
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+        report_fatal_error("Fatal error, parsing cannot continue", cur_token);
     }
 
     public void report_error(String message, Object info) {
     	StringBuilder msg = new StringBuilder(message);
     	if (info instanceof Symbol)
-            msg.append (" na liniji ").append(((Symbol)info).left);
+            msg.append (", line ").append(((Symbol)info).left);
         log.error(msg.toString());
     }
 :}
@@ -44,7 +44,7 @@ terminal PROGRAM, CONST, ASSIGN, SEMICOLON, COMMA,
     GREATER_THAN, LESSER_THAN_OR_EQUAL_TO, LESSER_THAN,
     ADD, SUB, MUL, DIV, MOD, LOGICAL_AND, LOGICAL_OR, RETURN, NEW,
     DOT, QUESTION_MARK, COLON, READ, PRINT, DO, WHILE, IF, ELSE,
-    SWITCH, CASE, POSTINC, POSTDEC, ENUM;
+    SWITCH, CASE, POSTINC, POSTDEC, ENUM, DEFAULT;
 
 terminal String IDENT;
 terminal Character CHARCONST;
@@ -78,7 +78,7 @@ nonterminal FullPrintStatement, CaseList,
         AssignStatementRecover,
         DoWhileStart, DoWhileEnd,
         BreakKeyword, ContinueKeyword,
-        SwitchStart, SwitchEnd;
+        SwitchStart, SwitchEnd, OptionalDefaultCase;
 
 nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName, ClassName;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodReturnTypeAndName;
@@ -89,7 +89,7 @@ nonterminal rs.etf.pp1.symboltable.concepts.Obj Condition, CondTerm, CondFact, C
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj OptionalElseStatement, ElseKeyword, IfCondExpr;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj TernaryFirstExpr, TernarySecondExprStart, TernaryThirdExprStart;
-nonterminal rs.etf.pp1.symboltable.concepts.Obj CaseLabel, DoWhileCondition;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj CaseLabel, DoWhileCondition, DefaultLabel;
 precedence left ELSE;
 
 Program ::= (Program) PROGRAM ProgName:p DeclList
@@ -196,7 +196,7 @@ StatementList ::= (MethodStatement) StatementList Statement
 Statement ::= (DesignatorStatement) DesignatorStatementOptions
     | (IfElseStatement) IF IfCondExpr Statement OptionalElseStatement
     | (DoWhileStatement) DoWhileStart Statement DoWhileCondition LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS DoWhileEnd
-    | (SwitchStatement) SwitchStart LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList SwitchEnd
+    | (SwitchStatement) SwitchStart LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList OptionalDefaultCase SwitchEnd
     | (BreakStatement) BreakKeyword SEMICOLON
     | (ContinueStatement) ContinueKeyword SEMICOLON
     | (ReturnStatement) RETURN OptionalExpr SEMICOLON
@@ -241,6 +241,11 @@ ElseKeyword ::= (ElseKeyword) ELSE;
 
 CaseList ::= (Case) CaseList CASE CaseLabel COLON StatementList
     | (NoCase);
+
+OptionalDefaultCase ::= (DefaultCase) DefaultLabel COLON StatementList
+    | (NoDefaultCase);
+
+DefaultLabel ::= (DefaultLabel) DEFAULT;
 
 CaseLabel ::= (CaseLabel) NUMCONST:numConst;
 

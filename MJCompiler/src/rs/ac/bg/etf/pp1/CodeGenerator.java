@@ -301,7 +301,7 @@ public class CodeGenerator extends VisitorAdaptor {
         return relopCode;
     }
 
-    private void setRelOp(CondFact condFact, int startOfIfAddr, int endOfIfAddr, boolean orOpExists, 
+    private void setRelOp(CondFact condFact, int startOfIfAddr, int endOfIfAddr, boolean orOpExists,
         boolean andOpExists, int prevRelOpAddr) {
         int relOpStartAddr = condFact.obj.getKind();
         if (condFact instanceof SingleCondFact) {
@@ -378,7 +378,7 @@ public class CodeGenerator extends VisitorAdaptor {
             condTerm = ((NextCondTerm)condTerm).getCondTerm();
         }
 
-        setRelOp(((SingleCondTerm)condTerm).getCondFact(), startOfIfAddr, endOfIfAddr, 
+        setRelOp(((SingleCondTerm)condTerm).getCondFact(), startOfIfAddr, endOfIfAddr,
             orOpExists, andOpExists, prevRelOpAddr);
         return ((SingleCondTerm)condTerm).getCondFact().obj.getKind();
     }
@@ -418,13 +418,13 @@ public class CodeGenerator extends VisitorAdaptor {
             }
 
             while (condTerm instanceof NextCondTerm) {
-                setRelOp(((NextCondTerm)condTerm).getCondFact(), startOfStatement, endOfStatement, 
+                setRelOp(((NextCondTerm)condTerm).getCondFact(), startOfStatement, endOfStatement,
                     orOpExists, andOpExists, endOfStatement);
                 condTerm = ((NextCondTerm)condTerm).getCondTerm();
             }
 
             if (!isSingleCondTerm) {
-                setRelOp(((SingleCondTerm)condTerm).getCondFact(), startOfStatement, endOfStatement, 
+                setRelOp(((SingleCondTerm)condTerm).getCondFact(), startOfStatement, endOfStatement,
                     orOpExists, andOpExists, endOfStatement);
             }
 
@@ -492,17 +492,26 @@ public class CodeGenerator extends VisitorAdaptor {
         int startOfSwitchAddr = switchStartAddrs.pop();
         insideDoWhile.pop();
         int endOfSwitchAddr = Code.pc;
+        int lastCaseAddr = -1;
 
         CaseList currentCase = switchStatement.getCaseList();
         int prevCaseStartAddr = 0;
 
         if (currentCase instanceof Case) { // last
             int caseJmpAddr = ((Case)currentCase).getCaseLabel().obj.getAdr();
+            lastCaseAddr = caseJmpAddr;
             prevCaseStartAddr = ((Case)currentCase).getCaseLabel().obj.getKind();
+
+            // jump to end
+            // can potentially be changed later if a default case exists
             Code.put2(caseJmpAddr + 1, endOfSwitchAddr - caseJmpAddr);
-            if (((Case)currentCase).getCaseList() instanceof NoCase) { // if is first, dont use the jmp
+
+            // if is first, dont use the jmp or the case will be skipped
+            // its first if its not a Case case
+            if (!(((Case)currentCase).getCaseList() instanceof Case)) {
                 Code.put2(prevCaseStartAddr - 2, 3);
             }
+
             currentCase = ((Case)currentCase).getCaseList();
         }
         else {
@@ -516,10 +525,17 @@ public class CodeGenerator extends VisitorAdaptor {
             Code.put2(caseJmpAddr + 1, prevCaseStartAddr - caseJmpAddr);
             prevCaseStartAddr = ((Case)currentCase).getCaseLabel().obj.getKind();
 
-            if (((Case)currentCase).getCaseList() instanceof NoCase) { // if is first, dont use the jmp
+            // if is first, dont use the jmp
+            // its first if its not a Case case
+            if (!(((Case)currentCase).getCaseList() instanceof Case)) {
                 Code.put2(prevCaseStartAddr - 2, 3);
             }
             currentCase = ((Case)currentCase).getCaseList();
+        }
+
+        if (switchStatement.getOptionalDefaultCase() instanceof DefaultCase && lastCaseAddr != -1) {
+            int defaultCaseStartAddr = ((DefaultCase)switchStatement.getOptionalDefaultCase()).getDefaultLabel().obj.getKind();
+            Code.put2(lastCaseAddr + 1, defaultCaseStartAddr - lastCaseAddr);
         }
 
         // adding the end of switch address to all inner break statements
@@ -541,6 +557,10 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put2(0);
         Code.put(Code.pop);
         Code.put2(jmpAddr + 1, Code.pc - jmpAddr);
+    }
+
+    public void visit(DefaultLabel defaultLabel) {
+        defaultLabel.obj = new Obj(Code.pc, "", null);
     }
 
     public void visit(SwitchStart switchStart) {
