@@ -54,6 +54,7 @@ import java_cup.runtime.Symbol;
 "extends"   { return new_symbol(sym.EXTENDS, yytext()); }
 "continue"  { return new_symbol(sym.CONTINUE, yytext()); }
 "case"      { return new_symbol(sym.CASE, yytext()); }
+"final"     { return new_symbol(sym.FINAL, yytext()); }
 "++"        { return new_symbol(sym.POSTINC, yytext()); }
 "--"        { return new_symbol(sym.POSTDEC, yytext()); }
 "+" 		{ return new_symbol(sym.ADD, yytext()); }

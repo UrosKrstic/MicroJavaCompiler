@@ -215,6 +215,35 @@ public class CodeGenerator extends VisitorAdaptor {
     }
 
     public void visit(AssignExpr assignExpr) {
+        if (assignExpr.getAssignDesignator().obj.getKind() == Obj.Fld) {
+            if (assignExpr.getAssignDesignator().obj.getFpPos() == 1) {
+                if (assignExpr.getAssignDesignator().getDesignator() instanceof SingleDesignator) {
+                    Code.load(assignExpr.getAssignDesignator().obj);
+                }
+                else {
+                    assignExpr.getAssignDesignator().getDesignator().traverseBottomUp(new CodeGenerator());
+                }
+                if (assignExpr.getAssignDesignator().getDesignator() instanceof SingleDesignator) {
+                    Code.load(assignExpr.getAssignDesignator().obj);
+                }
+                else {
+                    assignExpr.getAssignDesignator().getDesignator().traverseBottomUp(new CodeGenerator());
+                }
+                Code.put(Code.getfield);
+                Code.put2(assignExpr.getAssignDesignator().obj.getAdr() + 1);
+                Code.loadConst(0);
+                int cmpAdr = Code.pc;
+                Code.put(Code.jcc + Code.eq);
+                Code.put2(0);
+                Code.put(Code.trap);
+                Code.put(2);
+                Code.put2(cmpAdr + 1, Code.pc - cmpAdr);
+                Code.loadConst(1);
+                Code.put(Code.putfield);
+                Code.put2(assignExpr.getAssignDesignator().obj.getAdr() + 1);
+
+            }
+        }
         Code.store(assignExpr.getAssignDesignator().obj);
     }
 
@@ -660,8 +689,14 @@ public class CodeGenerator extends VisitorAdaptor {
 
     public void visit(NewOperatorFactor newOperatorFactor) {
         // report_info("[NewOp] " + newOperatorFactor.obj.getType().getNumberOfFields(), newOperatorFactor);
+        int field_cnt = 0;
+        for (Obj field: newOperatorFactor.obj.getType().getMembers()) {
+            if (field.getKind() != Obj.Fld) break;
+            field_cnt++;
+        }
         Code.put(Code.new_);
-        Code.put2(newOperatorFactor.obj.getType().getNumberOfFields() * 4);
+        // Code.put2(newOperatorFactor.obj.getType().getNumberOfFields() * 4);
+        Code.put2(field_cnt * 4);
 
         // LOAD VTF for newly created object of a class
         Code.put(Code.dup);

@@ -28,6 +28,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     private static boolean errorInClassDef = false;
     private static Obj currentClass = null;
     private Iterator<Obj> parentClassMemberIter = null;
+    private static boolean isFinalField = false;
 
     // Methods
     private static Obj currentMethod = null;
@@ -158,6 +159,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (isFormParamDecl && objNode != null) {
             currentMethodFormParams.put(objNode.getName(), objNode);
         }
+
+        // indicator that the field is final
+        if (isFinalField) {
+            objNode.setFpPos(1);
+        }
     }
 
     public void visit(ConstDecl constDecl) {
@@ -196,6 +202,14 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
     }
 
+    public void visit(FinalStart finalStart) {
+        isFinalField = true;
+    }
+
+    public void visit(FinalClassVarDecls finalClassVarDecls) {
+        isFinalField = false;
+    }
+
     public void visit(ClassName className) {
         inClassDefinition = true;
         errorInClassDef = checkForMultipleDeclarations(className.getClassName(), 0, className, "Class name");
@@ -231,7 +245,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             errorInClassDef = true;
             return;
         }
-
+ 
         currentClass.getType().setElementType(parentClassType);
         int parentClassFieldCnt = parentClassType.getNumberOfFields() - 1;
         //int parentClassFieldCnt = parentClassType.getNumberOfFields();
@@ -261,6 +275,25 @@ public class SemanticAnalyzer extends VisitorAdaptor {
             return;
         }
 
+        // reposition field positions in case of final fields
+        int nVars = MySymbolTable.currentScope.getnVars();
+        int i = 0;
+        int currentAdr = 0;
+        for (Obj local : MySymbolTable.currentScope.getLocals().symbols()) {
+            if (i == nVars) break;
+            local.setAdr(currentAdr);
+            if (local.getFpPos() == 1) {
+                currentAdr++;
+            }
+            currentAdr++;
+            i++;
+        }
+        //fill to according size
+        while (i < currentAdr) {
+            MySymbolTable.currentScope.addToLocals(new Obj(Obj.Fld, "", null));
+            i++;
+        }
+
         Struct parentClassType = currentClass.getType().getElemType();
 
         if (parentClassType != null) {
@@ -274,6 +307,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
         MySymbolTable.chainLocalSymbols(currentClass.getType());
         MySymbolTable.closeScope();
+        report_info("field cnt: " + currentClass.getType().getNumberOfFields(), classDecl);
         inClassDefinition = false;
         currentClass = null;
     }

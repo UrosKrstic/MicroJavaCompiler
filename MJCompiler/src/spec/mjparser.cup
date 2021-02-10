@@ -44,7 +44,7 @@ terminal PROGRAM, CONST, ASSIGN, SEMICOLON, COMMA,
     GREATER_THAN, LESSER_THAN_OR_EQUAL_TO, LESSER_THAN,
     ADD, SUB, MUL, DIV, MOD, LOGICAL_AND, LOGICAL_OR, RETURN, NEW,
     DOT, QUESTION_MARK, COLON, READ, PRINT, DO, WHILE, IF, ELSE,
-    SWITCH, CASE, POSTINC, POSTDEC, ENUM;
+    SWITCH, CASE, POSTINC, POSTDEC, ENUM, FINAL;
 
 terminal String IDENT;
 terminal Character CHARCONST;
@@ -60,7 +60,8 @@ nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
         ConstValue, OptionalExtendedClassLBrace, ConstDeclList,
         GlobalVarDeclListWithErrorRecovery, DeclEnd,
         ClassOptionalVarDeclList, ClassVarDecls, ConstDeclWithCOMMA,
-        GlobalVarDecl, GlobalVarDeclWithCOMMA, MethodDeclStart;
+        GlobalVarDecl, GlobalVarDeclWithCOMMA, MethodDeclStart, 
+        FinalClassVarDecls, FinalStart;
 
 /* Method definition related nonterminals */
 nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
@@ -144,12 +145,18 @@ ClassDecl ::= (ClassDecl) CLASS ClassName OptionalExtendedClassLBrace ClassOptio
 ClassName ::= (ClassName) IDENT:className;
 
 ClassOptionalVarDeclList ::= (FullClassVarDecl) ClassOptionalVarDeclList ClassVarDecls
+    | (FinalClassVarDecl) ClassOptionalVarDeclList FinalClassVarDecls // final
     | (NoClassVarDecls);
 
 OptionalExtendedClassLBrace ::= (ExtendedClass) EXTENDS Type LEFT_CURLY_BRACE
     | (ErrorExtendedClass) error LEFT_CURLY_BRACE:l
     {: parser.report_error("Error recovery inside of an incorrect class extends clause, line " + lleft, null); :}
     | (NoExtendedClass) LEFT_CURLY_BRACE;
+
+// final vardecl list
+FinalClassVarDecls ::= (FinalClassVarDecls) FinalStart Type VarDeclList SEMICOLON;
+
+FinalStart ::= (FinalStart) FINAL;
 
 ClassVarDecls ::= (RegularClassVarDecls) Type VarDeclList SEMICOLON
     | (ErrorClassVarDecls) error SEMICOLON:l

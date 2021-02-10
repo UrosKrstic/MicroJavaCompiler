@@ -72,8 +72,8 @@
 
     <target name="run" depends="compile">
         <java classname="rs.ac.bg.etf.pp1.Compiler" fork="true">
-            <arg value="${arg0}"/>
-            <arg value="${arg1}"/>
+            <arg value="bin/program.mj"/>
+            <arg value="bin/program.obj"/>
             <classpath>
                 <pathelement path="."/>
                 <pathelement path="bin"/>
@@ -88,7 +88,7 @@
 
     <target name="disasm">
 		<java classname="rs.etf.pp1.mj.runtime.disasm">
-			<arg value="${arg0}"/>
+			<arg value="bin/program.obj"/>
 			<classpath>
 				<pathelement location="lib/mj-runtime-1.1.jar"/>
 			</classpath>
@@ -97,7 +97,7 @@
 
 	<target name="runObj" depends="disasm" >
 		<java classname="rs.etf.pp1.mj.runtime.Run">
-			<arg value="${arg0}"/>
+			<arg value="bin/program.obj"/>
 			<classpath>
 				<pathelement location="lib/mj-runtime-1.1.jar"/>
 			</classpath>
@@ -106,7 +106,7 @@
 
     <target name="debugObj" depends="disasm" >
 		<java classname="rs.etf.pp1.mj.runtime.Run">
-			<arg value="${arg0}"/>
+			<arg value="bin/program.obj"/>
             <arg value="-debug"/>
 			<classpath>
 				<pathelement location="lib/mj-runtime-1.1.jar"/>
