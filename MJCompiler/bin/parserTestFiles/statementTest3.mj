@@ -1,0 +1,11 @@
+program MJProgram
+    const boolean flag = true;
+    {
+        void f() int num; {
+            do {
+                if (flag) break;
+                i++;
+                num = num + i;
+            } while (i < 10);
+        }
+    }

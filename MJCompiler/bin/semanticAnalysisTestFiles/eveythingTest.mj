@@ -1,0 +1,87 @@
+program MJProgram
+    const int n = 2;
+    const char a = 'A';
+    int b, arr[];
+    char c;
+    int d;
+    class Krug {
+        int r, o;
+        char letter;
+        {
+            int circ(int r) {
+                this.r = this.o + r;
+                return 0;
+            }
+        }
+    }
+    class Lopta extends Krug {
+        int v;
+        Krug k;
+        bool isCircle;
+        Krug krugovi[];
+        {
+            void lmao() {
+                print(krugovi);
+                print(v);
+                print(k, 10);
+                print(krugovi, 10);
+                return;
+            }
+
+            int volume(int r) bool isRight; {
+                this.v = r + k.r * this.k.o -
+                    this.o * this.r;
+                v = krugovi[1].r;
+                circ(r);
+                lmao();
+                volume(r);
+                if (r) {}
+                do {} while(5 + 1);
+                return 'a';
+            }
+
+            int main(char c) {
+
+            }
+        }
+    }
+    {
+        void lol(int a, int b, int c) {}
+        int kiki(int a, int b) {}
+        Lopta EJ(Krug k) {}
+        void f(bool is) char a; Lopta l; Krug k; {
+            //a = 'a';
+            //is = true;
+            //// n = true ? n : arr[b];
+            //// n = a * b + a;
+            //lol(n, kiki(n, n), b);
+            read(a);
+            read(l);
+            read(n);
+            read(arr[1]);
+            read(arr);
+            do {
+                break;
+                do {
+                    break;
+                    continue;
+                } while(false);
+                continue;
+            } while(true);
+            break;
+            continue;
+            l.r++;
+            b--;
+            k = l;
+            k = b;
+            EJ(k);
+            switch(k) {
+                case 1:
+                case 2:
+                case 2:
+                    break;
+            }
+            k = EJ(l, l);
+        }
+        void main() {}
+    }

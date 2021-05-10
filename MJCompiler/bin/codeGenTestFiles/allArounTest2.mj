@@ -1,0 +1,27 @@
+program MJ
+int sum;
+{
+    void main() int i, a[]; {
+        a = new int[6];
+        a[0] = 0;
+        a[1] = 30;
+        a[2] = 0;
+        a[3] = 120;
+        a[4] = 20;
+        a[5] = 300;
+        sum = 0;
+        i = 0;
+        do {
+            if (i % 2 == 0)
+                sum = sum + a[i];
+            i++;
+        } while(i < 6);
+        i = 0;
+        do {
+            if (i % 2 == 1)
+                sum = sum + a[i];
+            i++;
+        } while(i < 6);
+        print(sum);
+    }
+}

@@ -1,0 +1,6 @@
+program MJProgram
+    {
+        int f(int a, bool b, char c[])
+        int d, e[]; char f[]; bool flag;  
+        {}
+    }

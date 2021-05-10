@@ -1,0 +1,8 @@
+program MJProgram
+    {
+        void f() {
+            break;
+            continue;
+            return x;
+        }
+    }

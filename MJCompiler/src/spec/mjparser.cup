@@ -1,0 +1,343 @@
+package rs.ac.bg.etf.pp1;
+import java_cup.runtime.*;
+import org.apache.log4j.*;
+import rs.ac.bg.etf.pp1.ast.*;
+
+parser code {:
+    Logger log = Logger.getLogger(getClass());
+
+    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+
+    public void report_fatal_error(String message, Object info) throws java.lang.Exception {
+      done_parsing();
+      report_error(message, info);
+    }
+
+    public void syntax_error(Symbol cur_token) {
+        report_error("\nSintaksna greska", cur_token);
+    }
+
+    public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
+        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+    }
+
+    public void report_error(String message, Object info) {
+    	StringBuilder msg = new StringBuilder(message);
+    	if (info instanceof Symbol)
+            msg.append (" na liniji ").append(((Symbol)info).left);
+        log.error(msg.toString());
+    }
+:}
+
+scan with {:
+    Symbol s = this.getScanner().next_token();
+	if (s != null && s.value != null)
+		log.info(s.toString() + " " + s.value.toString());
+	return s;
+:}
+
+terminal PROGRAM, CONST, ASSIGN, SEMICOLON, COMMA,
+    CLASS, EXTENDS, LEFT_CURLY_BRACE, RIGHT_CURLY_BRACE,
+    LEFT_SQUARE_BRACKET, RIGHT_SQUARE_BRACKET,
+    LEFT_PARENTHESIS, RIGHT_PARENTHESIS, VOID, BREAK,
+    CONTINUE, EQUALS, NOT_EQUALS, GREATER_THAN_OR_EQUAL_TO,
+    GREATER_THAN, LESSER_THAN_OR_EQUAL_TO, LESSER_THAN,
+    ADD, SUB, MUL, DIV, MOD, LOGICAL_AND, LOGICAL_OR, RETURN, NEW,
+    DOT, QUESTION_MARK, COLON, READ, PRINT, DO, WHILE, IF, ELSE,
+    SWITCH, CASE, POSTINC, POSTDEC, ENUM;
+
+terminal String IDENT;
+terminal Character CHARCONST;
+terminal Boolean BOOLCONST;
+terminal Integer NUMCONST;
+
+/* Program related nonterminals */
+nonterminal Program;
+
+/* Variable, Const and Class definition related nonterminals */
+nonterminal DeclList, ConstDeclListWithErrorRecovery, VarDeclList, VarDecl,
+        OptionalVarDeclList, ClassDecl, OptionalArrayBrackets, ConstDecl,
+        ConstValue, OptionalExtendedClassLBrace, ConstDeclList,
+        GlobalVarDeclListWithErrorRecovery, DeclEnd,
+        ClassOptionalVarDeclList, ClassVarDecls, ConstDeclWithCOMMA,
+        GlobalVarDecl, GlobalVarDeclWithCOMMA, MethodDeclStart;
+
+/* Method definition related nonterminals */
+nonterminal MethodDeclListWithBraces, MethodDeclList, MethodDecl,
+        VoidOrType, OptionalFormPars, FormsPars, FormParamWithCOMMA,
+        FormArgsStart, FormArgsEnd, MethodBodyStart;
+
+/* Expression related nonterminals */
+nonterminal StatementList, Statement, OptionalMinus,
+        OptionalExpr, Assignop, Addop, Mulop, Relop,
+        OptionalExprInBrackets, OptionalActPars,
+        OptionalActParsWithBrackets, ActPars;
+
+/* Statement related nonterminals */
+nonterminal FullPrintStatement, CaseList,
+        AssignStatementRecover,
+        DoWhileStart, DoWhileEnd,
+        BreakKeyword, ContinueKeyword,
+        SwitchStart, SwitchEnd;
+
+nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName, ClassName;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodReturnTypeAndName;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Expr, Term, TermExpr, Factor, SubTerm, AddopTerm;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, ReadDesignator, AssignDesignator;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj DesignatorStatementOptions, FunctionCallStatement;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Condition, CondTerm, CondFact, ConditionExpr;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj OptionalElseStatement, ElseKeyword, IfCondExpr;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj TernaryFirstExpr, TernarySecondExprStart, TernaryThirdExprStart;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj CaseLabel, DoWhileCondition;
+precedence left ELSE;
+
+Program ::= (Program) PROGRAM ProgName:p DeclList
+    DeclEnd MethodDeclList RIGHT_CURLY_BRACE;
+
+ProgName ::= (ProgName) IDENT:progName;
+
+DeclList ::= (GlobalConstDeclList) DeclList ConstDeclListWithErrorRecovery
+    | (GlobalVarDeclList) DeclList GlobalVarDeclListWithErrorRecovery
+    | (ClassDeclList) DeclList ClassDecl
+    | (NoDeclList);
+
+DeclEnd ::= (DeclEnd) LEFT_CURLY_BRACE;
+
+ConstDeclListWithErrorRecovery ::= (FullConstDeclListWithErrorRecovery) CONST Type ConstDeclList
+    | (ErrorConstDeclWithErrorRecovery) CONST error SEMICOLON:l
+    {: parser.report_error("Error recovery inside of a constant declaration until ';', line " + lleft, null); :}
+    ;
+
+ConstDeclList ::= (FullConstDeclWithSEMICOLON) ConstDecl SEMICOLON
+    | (ErrorConstDeclWithSEMICOLON) error SEMICOLON:l
+    {: parser.report_error("Error recovery inside of a constant declaration until ';', line " + lleft, null); :}
+    | (ConstDeclListCOMMA) ConstDeclWithCOMMA ConstDeclList
+    ;
+
+ConstDeclWithCOMMA ::= (FullConstDeclWithCOMMA) ConstDecl COMMA
+    | (ErrorConstDeclWithCOMMA) error COMMA:l
+    {: parser.report_error("Error recovery inside of a constant declaration until ',', line " + lleft, null); :}
+    ;
+
+ConstDecl ::= (ConstDecl) IDENT:constName ASSIGN ConstValue;
+
+GlobalVarDeclListWithErrorRecovery ::= (FullGlobalVarDeclList) Type GlobalVarDecl
+    | (ErrorGlobalVarDeclList) error SEMICOLON:l
+    {: parser.report_error("Error recovery inside of a global variable declaration until ';', line " + lleft, null); :}
+    ;
+
+GlobalVarDecl ::= (FullGlobalVarDecl) VarDecl SEMICOLON
+    | (ErrorGlobalVarDecl) error SEMICOLON:l
+    {: parser.report_error("Error recovery inside of a global variable declaration until ';', line " + lleft, null); :}
+    | (FullGlobalVarDeclWithCOMMA) GlobalVarDeclWithCOMMA GlobalVarDecl
+    ;
+
+GlobalVarDeclWithCOMMA ::= (NextGlobalVarDeclWithCOMMA) VarDecl COMMA
+    | (ErrorGlobalVarDeclWithCOMMA) error COMMA:l
+    {: parser.report_error("Error recovery inside of a global variable declaration until ',', line " + lleft, null); :}
+    ;
+
+ClassDecl ::= (ClassDecl) CLASS ClassName OptionalExtendedClassLBrace ClassOptionalVarDeclList
+    MethodDeclListWithBraces RIGHT_CURLY_BRACE;
+
+ClassName ::= (ClassName) IDENT:className;
+
+ClassOptionalVarDeclList ::= (FullClassVarDecl) ClassOptionalVarDeclList ClassVarDecls
+    | (NoClassVarDecls);
+
+OptionalExtendedClassLBrace ::= (ExtendedClass) EXTENDS Type LEFT_CURLY_BRACE
+    | (ErrorExtendedClass) error LEFT_CURLY_BRACE:l
+    {: parser.report_error("Error recovery inside of an incorrect class extends clause, line " + lleft, null); :}
+    | (NoExtendedClass) LEFT_CURLY_BRACE;
+
+ClassVarDecls ::= (RegularClassVarDecls) Type VarDeclList SEMICOLON
+    | (ErrorClassVarDecls) error SEMICOLON:l
+    {: parser.report_error("Error recovery inside of a class field definition, line " + lleft, null); :}
+    ;
+
+MethodDeclListWithBraces ::= (FullMethodDeclListWithBraces) MethodDeclStart MethodDeclList RIGHT_CURLY_BRACE
+    | (NoMethodDeclListWithBraces);
+
+MethodDeclStart ::= (MethodDeclStart) LEFT_CURLY_BRACE;
+
+MethodDeclList ::= (MethodDecls) MethodDeclList MethodDecl
+    | (NoMethodDeclList);
+
+MethodDecl ::= (MethodDecl) MethodReturnTypeAndName FormArgsStart OptionalFormPars
+    OptionalVarDeclList MethodBodyStart StatementList RIGHT_CURLY_BRACE;
+
+MethodReturnTypeAndName ::= (MethodReturnTypeAndName) VoidOrType IDENT:methodName;
+
+MethodBodyStart ::= (MethodBodyStart) LEFT_CURLY_BRACE;
+
+FormArgsStart ::= (FormArgsStart) LEFT_PARENTHESIS;
+FormArgsEnd ::= (FormArgsEnd) RIGHT_PARENTHESIS;
+
+VoidOrType ::= (VoidReturnType) VOID
+    | (ReturnType) Type;
+
+OptionalFormPars ::= (FullFormPars) FormsPars
+    | (NoFormParams) FormArgsEnd;
+
+FormsPars ::= (FormParamWithPAREN) Type VarDecl FormArgsEnd
+    | (ErrorFormParamWithPAREN) error RIGHT_PARENTHESIS:l
+    {: parser.report_error("Error recovery inside of formal parameter definition until ')', line " + lleft, null); :}
+    | (InnerFormParamWithCOMMA) FormParamWithCOMMA FormsPars;
+
+FormParamWithCOMMA ::= (FullFormParamWithCOMMA) Type VarDecl COMMA
+    | (ErrorFormParamWithCOMMA) error COMMA:l
+    {: parser.report_error("Error recovery inside of formal parameter definition until ',', line " + lleft, null); :}
+    ;
+
+StatementList ::= (MethodStatement) StatementList Statement
+    | (NoStatement);
+
+Statement ::= (DesignatorStatement) DesignatorStatementOptions
+    | (IfElseStatement) IF IfCondExpr Statement OptionalElseStatement
+    | (DoWhileStatement) DoWhileStart Statement DoWhileCondition LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS DoWhileEnd
+    | (SwitchStatement) SwitchStart LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS LEFT_CURLY_BRACE CaseList SwitchEnd
+    | (BreakStatement) BreakKeyword SEMICOLON
+    | (ContinueStatement) ContinueKeyword SEMICOLON
+    | (ReturnStatement) RETURN OptionalExpr SEMICOLON
+    | (ReadStatement) READ LEFT_PARENTHESIS ReadDesignator RIGHT_PARENTHESIS SEMICOLON
+    | (PrintStatement) FullPrintStatement SEMICOLON
+    | (NestedStatement) LEFT_CURLY_BRACE StatementList RIGHT_CURLY_BRACE
+    ;
+
+DoWhileStart ::= (DoWhileStart) DO;
+DoWhileEnd ::= (DoWhileEnd) SEMICOLON;
+DoWhileCondition ::= (DoWhileCondition) WHILE;
+
+SwitchStart ::= (SwitchStart) SWITCH;
+SwitchEnd ::= (SwitchEnd) RIGHT_CURLY_BRACE;
+
+BreakKeyword ::= (BreakKeyword) BREAK;
+ContinueKeyword ::= (ContinueKeyword) CONTINUE;
+
+IfCondExpr ::= (RegularIfCondExpr) LEFT_PARENTHESIS Condition RIGHT_PARENTHESIS
+    | (ErrorIfCondExpr) error RIGHT_PARENTHESIS:l
+    {: parser.report_error("Error recovery inside of if's conditional statement, line " + lleft, null); :}
+    ;
+
+DesignatorStatementOptions ::= (AssignStatementWithErrRecovery) AssignStatementRecover
+    | (FunctionCall) FunctionCallStatement SEMICOLON
+    | (PostIncrement) AssignDesignator POSTINC SEMICOLON
+    | (PostDecrement) AssignDesignator POSTDEC SEMICOLON;
+
+AssignStatementRecover ::= (AssignExpr) AssignDesignator Assignop Expr SEMICOLON
+    | (AssignExprError) error SEMICOLON:l
+    {: parser.report_error("Error recovery inside of an assignment, line " + lleft, null); :}
+    ;
+
+ReadDesignator ::= (ReadDesignator) Designator;
+
+AssignDesignator ::= (AssignDesignator) Designator;
+
+OptionalElseStatement ::= (ElseStatement) ElseKeyword Statement
+    | (NoElseStatement);
+
+ElseKeyword ::= (ElseKeyword) ELSE;
+
+CaseList ::= (Case) CaseList CASE CaseLabel COLON StatementList
+    | (NoCase);
+
+CaseLabel ::= (CaseLabel) NUMCONST:numConst;
+
+FullPrintStatement ::= (SimplePrintStatement) PRINT LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
+    | (ParameterizedPrintStatement) PRINT LEFT_PARENTHESIS Expr COMMA NUMCONST:printWidth RIGHT_PARENTHESIS;
+
+OptionalExpr ::= (FullExpr) Expr
+    | (NoExpr);
+
+// ConditionExpr ::= (TernaryConditionExpr) Condition QUESTION_MARK ConditionExpr COLON ConditionExpr
+//     | (RegularConditionExpr) Condition;
+
+Condition ::= (NextCondition) Condition LOGICAL_OR CondTerm
+    | (SingleCondition) CondTerm;
+
+CondTerm ::= (NextCondTerm) CondTerm LOGICAL_AND CondFact
+    | (SingleCondTerm) CondFact;
+
+/*---------------IMPORTANT---------------*/
+CondFact ::= (FullCondFact) Expr Relop Expr
+    | (SingleCondFact) Expr;
+
+/*---------------IMPORTANT---------------*/
+Expr ::= (TernaryExpr) TernaryFirstExpr TernarySecondExprStart TermExpr TernaryThirdExprStart TermExpr
+    | (RegularExpr) TermExpr;
+
+TernaryFirstExpr ::= (TernaryFirstExpr) TermExpr;
+TernarySecondExprStart ::= (TernarySecondExprStart) QUESTION_MARK;
+TernaryThirdExprStart ::= (TernaryThirdExprStart) COLON;
+
+TermExpr ::= (NextTermExpr) TermExpr  Addop Term
+    | (SingleTermExprWithMinus) SUB Term
+    | (SingleTermExpr) Term
+    ;
+
+// SubTerm ::= (SubTerm) SUB Term;
+
+// AddopTerm ::= (AddopTerm) Addop Term;
+
+Term ::= (NextTerm) Term Mulop Factor
+    | (SingleTerm) Factor;
+
+Factor ::= (FuncCall) FunctionCallStatement
+    | (DesignatorFactor) Designator
+    | (ConstFactor) ConstValue
+    | (NewOperatorFactor) NEW Type
+    | (NewOperatorFactorWithBrackets) NEW Type LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
+    | (ExprFactor) LEFT_PARENTHESIS Expr RIGHT_PARENTHESIS
+    ;
+
+// OptionalExprInBrackets ::= (FullExprInBrackets) LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
+//     | (NoExprInBrackets);
+
+// OptionalActParsWithBrackets ::= (FullActParsWihBrackets) LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS
+//     | (NoActParsWithBrackets);
+
+FunctionCallStatement ::= (FunctionCallStatement) Designator LEFT_PARENTHESIS OptionalActPars RIGHT_PARENTHESIS;
+
+OptionalActPars ::= (FullActPars) ActPars
+    | (NoActPars);
+
+ActPars ::= (NextActPar) ActPars COMMA Expr
+    | (SingleActPar) Expr;
+
+Designator ::= (InnerDotIdentDesignator) Designator DOT IDENT:classField
+    | (InnerExprInBracketsDesignator) Designator LEFT_SQUARE_BRACKET Expr RIGHT_SQUARE_BRACKET
+    | (SingleDesignator) IDENT:name;
+
+// OptionalMinus ::= (Minus) SUB | (NoMinus);
+
+OptionalVarDeclList ::= (FullVarDeclList) OptionalVarDeclList Type VarDeclList SEMICOLON
+    | (NoVarDeclList);
+
+VarDeclList ::= (NextVarDecl) VarDeclList COMMA VarDecl
+    | (SingleDecl) VarDecl;
+
+VarDecl ::= (VarDecl) IDENT:varName OptionalArrayBrackets;
+
+ConstValue ::= (NumberConst) NUMCONST:numConst | (CharConst) CHARCONST:charConst | (BooleanConst) BOOLCONST:boolConst;
+
+OptionalArrayBrackets ::= (ArrayBrackets) LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACKET
+    | (NoArrayBrackets);
+
+Type ::= (Type) IDENT:typeName;
+
+Assignop ::= (Assignop) ASSIGN;
+
+Relop ::= (EqualsRelop) EQUALS
+    | (NotEqualsRelop) NOT_EQUALS
+    | (GreaterEqualsRelop) GREATER_THAN_OR_EQUAL_TO
+    | (GreaterRelop) GREATER_THAN
+    | (LesserEqualsRelop) LESSER_THAN_OR_EQUAL_TO
+    | (LesserRelop) LESSER_THAN;
+
+Addop ::= (AddAddop) ADD
+    | (SubAddop) SUB;
+
+Mulop ::= (MulMulop) MUL
+    | (DivMulop) DIV
+    | (ModMulop) MOD;

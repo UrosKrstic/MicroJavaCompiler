@@ -1,0 +1,3 @@
+program MJProgram
+	const int y, x = 2;
+    {}

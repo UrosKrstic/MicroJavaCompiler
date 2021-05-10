@@ -1,0 +1,8 @@
+program MJProgram
+    {
+        void f() {
+            return -x + a;
+            return a + x * y / z - a;
+            return;
+        }
+    }

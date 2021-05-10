@@ -1,0 +1,13 @@
+program MJProgram
+    char a, b[], cde;
+    int xDim[], yDim, zDim;
+    bool flags_12[], isFound;
+    bool isFound;
+    ClassName x;
+    const int ac = 4, wut = 0;
+    const int bc = 'c', dc = true;
+    const bool realFlag = true, 
+        falseFlag = false;
+    const char ejLmaoDude = 'a', nop = 2;
+    const Krug k = 2;
+    {}

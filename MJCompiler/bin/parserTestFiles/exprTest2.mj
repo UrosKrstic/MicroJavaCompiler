@@ -1,0 +1,7 @@
+program MJProgram
+    {
+        void f() {
+            return -x + a;
+            return foo(a, b) + keys.sum(-a, s); 
+        }
+    }

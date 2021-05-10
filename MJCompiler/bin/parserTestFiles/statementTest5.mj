@@ -1,0 +1,14 @@
+program MJProgram
+    const boolean flag = true;
+    {
+        void f() int num, a, b[]; {
+            switch (a) {
+                case 1: b[1] = a;
+                case 2:
+                case 3: {
+                    print('V');
+                }
+            }
+            continue;
+        }
+    }

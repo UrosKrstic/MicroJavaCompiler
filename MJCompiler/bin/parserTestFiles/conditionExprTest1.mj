@@ -1,0 +1,13 @@
+program MJProgram
+    {
+        void f() {
+            if (a < b && b != c || a + 3 >= cnt * 2 && a / 5 == d)
+            {
+                print(a <= d ? b : c);
+            }
+            else 
+            {
+                print(a || a ? b : c);
+            }
+        }
+    }
